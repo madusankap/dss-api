@@ -22,10 +22,12 @@ package org.wso2.carbon.dssapi.core;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.wso2.carbon.apimgt.api.model.API;
+import org.wso2.carbon.apimgt.api.model.LifeCycleEvent;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.dataservices.common.DBConstants;
 import org.wso2.carbon.dataservices.core.admin.DataServiceAdmin;
 import org.wso2.carbon.dataservices.ui.beans.Data;
+import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.util.APIUtil;
 import org.wso2.carbon.service.mgt.ServiceAdmin;
 import org.wso2.carbon.service.mgt.ServiceMetaDataWrapper;
@@ -96,6 +98,17 @@ public class APIPublisher {
             }
         }
         return listApi.toArray(new org.wso2.carbon.dssapi.model.API[listApi.size()]);
+    }
+    /**
+     * To list LifeCycle Events by DataService Name and version
+     * @param serviceName name of the service
+     * @param version version of the api
+     * @return List of LifeCycles according to the api.
+     */
+    public LifeCycleEventDao[] listLifeCycleEvents(String serviceName,String version) {
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        return new APIUtil().lifeCycleEventList(serviceName,username,tenantDomain,version);
     }
       /**
      * To add an API for a service

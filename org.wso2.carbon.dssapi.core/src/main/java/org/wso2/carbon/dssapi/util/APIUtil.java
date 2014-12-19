@@ -26,6 +26,7 @@ import org.wso2.carbon.apimgt.api.model.*;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
 import org.wso2.carbon.dataservices.ui.beans.*;
+import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.ArrayList;
@@ -291,6 +292,41 @@ public class APIUtil {
                 e.printStackTrace();
             }
         }
+    }
+    /**
+     * To update an API
+     *
+     * @param serviceId  service name of the service
+     * @param username   username of the logged user
+     * @param tenantName tenant of the logged user
+     */
+    public LifeCycleEventDao[] lifeCycleEventList(String serviceId, String username, String tenantName,String version) {
+        APIProvider apiProvider;
+        List<LifeCycleEvent> lifeCycleEventList=null;
+      List<LifeCycleEventDao> lifeCycleEventDaoList=new ArrayList<LifeCycleEventDao>();
+        String provider;
+        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
+            apiProvider = getAPIProvider(username+"@"+MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            provider=username;
+        } else {
+            provider = username + "-AT-" + tenantName;
+            apiProvider = getAPIProvider(username + "@" + tenantName);
+        }
+       APIIdentifier apiIdentifier=new APIIdentifier(provider,serviceId,version);
+        if (apiIdentifier != null) {
+            try {
+           lifeCycleEventList=apiProvider.getLifeCycleEvents(apiIdentifier);
+        if(!lifeCycleEventList.isEmpty()){
+            for (LifeCycleEvent lifeCycleEvent:lifeCycleEventList) {
+                LifeCycleEventDao lifeCycleEventDao=new LifeCycleEventDao(lifeCycleEvent.getApi(),lifeCycleEvent.getOldStatus().getStatus(),lifeCycleEvent.getNewStatus().getStatus(),lifeCycleEvent.getUserId(),lifeCycleEvent.getDate());
+                lifeCycleEventDaoList.add(lifeCycleEventDao);
+            }
+        }
+            } catch (APIManagementException e) {
+                e.printStackTrace();
+            }
+        }
+       return lifeCycleEventDaoList.toArray(new LifeCycleEventDao[lifeCycleEventDaoList.size()]);
     }
     private API createApiObject(String ServiceId, String username, String tenantName,Data data,String version,APIProvider apiProvider){
         String providerName;
