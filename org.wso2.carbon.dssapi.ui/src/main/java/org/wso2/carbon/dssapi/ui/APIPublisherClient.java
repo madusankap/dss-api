@@ -104,7 +104,7 @@ public class APIPublisherClient {
      * @throws RemoteException
      */
     public boolean isAPIAvailable(ServiceMetaData serviceMetaData) throws RemoteException {
-        return stub.apiAvailable(serviceMetaData.getName());
+        return stub.apiAvailable(serviceMetaData.getName(),"1.0.0");
     }
 
 
@@ -130,7 +130,7 @@ public class APIPublisherClient {
      */
     public boolean unpublishAPI(ServiceMetaData serviceMetaData) throws RemoteException {
         String serviceId = serviceMetaData.getName();
-        return stub.removeApi(serviceId);
+        return stub.removeApi(serviceId,"1.0.0");
     }
 
 
@@ -166,7 +166,7 @@ public class APIPublisherClient {
      * @throws RemoteException
      */
     public long checkNumberOfSubcriptions(String serviceName) throws RemoteException {
-        return stub.viewSubscriptions(serviceName);
+        return stub.viewSubscriptions(serviceName,"1.0.0");
 
     }
 }

@@ -63,7 +63,7 @@ public class APIUtil {
     public void addApi(String serviceId, String username, String tenantName,Data data,String version) {
                   APIProvider apiProvider;
            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
-                apiProvider = getAPIProvider(username+"@"+MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                apiProvider = getAPIProvider(username);
             } else {
                  apiProvider = getAPIProvider(username + "@" + tenantName);
             }
@@ -280,7 +280,7 @@ public class APIUtil {
     public void updateApi(String serviceId, String username, String tenantName,Data data,String version) {
         APIProvider apiProvider;
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
-            apiProvider = getAPIProvider(username+"@"+MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            apiProvider = getAPIProvider(username+"@");
         } else {
             apiProvider = getAPIProvider(username + "@" + tenantName);
         }
@@ -300,13 +300,13 @@ public class APIUtil {
      * @param username   username of the logged user
      * @param tenantName tenant of the logged user
      */
-    public LifeCycleEventDao[] lifeCycleEventList(String serviceId, String username, String tenantName,String version) {
+    public LifeCycleEventDao[] getLifeCycleEventList(String serviceId, String username, String tenantName,String version) {
         APIProvider apiProvider;
-        List<LifeCycleEvent> lifeCycleEventList=null;
+        List<LifeCycleEvent> lifeCycleEventList;
       List<LifeCycleEventDao> lifeCycleEventDaoList=new ArrayList<LifeCycleEventDao>();
         String provider;
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
-            apiProvider = getAPIProvider(username+"@"+MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            apiProvider = getAPIProvider(username);
             provider=username;
         } else {
             provider = username + "-AT-" + tenantName;
@@ -316,9 +316,17 @@ public class APIUtil {
         if (apiIdentifier != null) {
             try {
            lifeCycleEventList=apiProvider.getLifeCycleEvents(apiIdentifier);
-        if(!lifeCycleEventList.isEmpty()){
+        if(lifeCycleEventList.size()>0){
+
             for (LifeCycleEvent lifeCycleEvent:lifeCycleEventList) {
-                LifeCycleEventDao lifeCycleEventDao=new LifeCycleEventDao(lifeCycleEvent.getApi(),lifeCycleEvent.getOldStatus().getStatus(),lifeCycleEvent.getNewStatus().getStatus(),lifeCycleEvent.getUserId(),lifeCycleEvent.getDate());
+                LifeCycleEventDao lifeCycleEventDao;
+
+                if ((lifeCycleEvent.getOldStatus()!=null)){
+                     lifeCycleEventDao=new LifeCycleEventDao(apiIdentifier,lifeCycleEvent.getOldStatus().name(),lifeCycleEvent.getNewStatus().name(),lifeCycleEvent.getUserId(),lifeCycleEvent.getDate());
+                                  }
+                else{
+                    lifeCycleEventDao=new LifeCycleEventDao(apiIdentifier,"",lifeCycleEvent.getNewStatus().name(),lifeCycleEvent.getUserId(),lifeCycleEvent.getDate());
+                }
                 lifeCycleEventDaoList.add(lifeCycleEventDao);
             }
         }
@@ -335,11 +343,11 @@ public class APIUtil {
 
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
             providerName = username;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" + ServiceId+"-"+version ;
+            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" + ServiceId ;
             apiContext = "/api/" + ServiceId;
          } else {
             providerName = username + "-AT-" + tenantName;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + ServiceId+"-"+version;
+            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + ServiceId;
             apiContext = "/api/t/" + tenantName + "/" + ServiceId;
         }
 
