@@ -1,12 +1,11 @@
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
+<%@ page import="org.wso2.carbon.context.CarbonContext" %>
 <%@ page import="org.wso2.carbon.dssapi.ui.APIPublisherClient" %>
 <%@ page import="org.wso2.carbon.service.mgt.xsd.ServiceMetaData" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
-<%@ page import="org.wso2.carbon.context.CarbonContext" %>
-<%@ page import="org.osgi.framework.BundleContext" %>
 <!--
 ~ Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
 ~
@@ -27,6 +26,7 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%
     String serviceName = request.getParameter("serviceName");
+    String apiVersion = "1.0.0";
     boolean APIAvailability = false;
     String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
     ConfigurationContext configContext =
@@ -42,8 +42,9 @@
     try {
         client = new APIPublisherClient(cookie, backendServerURL, configContext);
         service = client.getServiceData(serviceName).getServices()[0];
+        apiVersion = client.getCurrentApiVersion(serviceName);
 
-        APIAvailability = client.isAPIAvailable(service);
+        APIAvailability = client.isAPIAvailable(service, apiVersion);
     } catch (Exception e) {
         response.setStatus(500);
         CarbonUIMessage uiMsg = new CarbonUIMessage(CarbonUIMessage.ERROR, e.getMessage(), e);
@@ -60,15 +61,19 @@
         <%
             if (APIAvailability) {
         %>
-            <tr class="tableOddRow">
-                <td><fmt:message key="published.date"/>
-                <%=service.getServiceDeployedTime()%>
-                </td>
-                <td><fmt:message key="update.date"/></td>
-            </tr>
-            <tr class="tableEvenRow">
-                <td colspan="2"><input type="button" value="Update API" onclick="" /> <input type="button" value="Unpublish API" onclick="unpublishAPI()" /> </td>
-            </tr>
+        <tr class="tableOddRow">
+            <td><fmt:message key="published.date"/>
+                <%=client.getPublishedDate(serviceName, apiVersion)%>
+            </td>
+            <td><fmt:message key="update.date"/>
+                <%=client.getUpdatedDate(serviceName, apiVersion)%>
+            </td>
+        </tr>
+        <tr class="tableEvenRow">
+            <td colspan="2"><input type="button" value="Update API" onclick=""/> <input type="button"
+                                                                                        value="Unpublish API"
+                                                                                        onclick="unpublishAPI()"/></td>
+        </tr>
         <tr class="tableOddRow">
             <td colspan="2"><fmt:message key="publish.history"/></td>
         </tr>
@@ -77,15 +82,15 @@
         </tr>
 
         <%
-            } else {
+        } else {
         %>
-            <tr class="tableOddRow">
-                <td>API Name : <input type="text" value="<%=serviceName%>" disabled style="width:80%" name="apiName" /> </td>
-                <td>Version : <input type="text" style="width:80%" name="apiVersion" id="apiVersion" /> </td>
-            </tr>
-            <tr class="tableEvenRow">
-                <td colspan="2"><input type="button" value="Publish as an API" onclick="publishAPI()"></td>
-            </tr>
+        <tr class="tableOddRow">
+            <td>API Name : <input type="text" value="<%=serviceName%>" disabled style="width:80%" name="apiName"/></td>
+            <td>Version : <input type="text" style="width:80%" name="apiVersion" id="apiVersion"/></td>
+        </tr>
+        <tr class="tableEvenRow">
+            <td colspan="2"><input type="button" value="Publish as an API" onclick="publishAPI()"></td>
+        </tr>
         <%
             }
         %>

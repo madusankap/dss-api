@@ -23,10 +23,12 @@ import org.apache.axis2.AxisFault;
 import org.apache.axis2.client.Options;
 import org.apache.axis2.client.ServiceClient;
 import org.apache.axis2.context.ConfigurationContext;
+import org.wso2.carbon.dssapi.model.xsd.*;
 import org.wso2.carbon.dssapi.stub.APIPublisherException;
 import org.wso2.carbon.dssapi.stub.APIPublisherStub;
 import org.wso2.carbon.service.mgt.xsd.ServiceMetaData;
 import org.wso2.carbon.service.mgt.xsd.ServiceMetaDataWrapper;
+
 import java.rmi.RemoteException;
 
 /**
@@ -97,14 +99,14 @@ public class APIPublisherClient {
     }
 
     /**
-     * To check whether an API is available for the given service
      *
-     * @param serviceMetaData service details
-     * @return api availability of the given service
+     * @param serviceName name of the service
+     * @param version version of the api
+     * @return api availability
      * @throws RemoteException
      */
-    public boolean isAPIAvailable(ServiceMetaData serviceMetaData) throws RemoteException {
-        return stub.apiAvailable(serviceMetaData.getName(),"1.0.0");
+    public boolean isAPIAvailable(String serviceName, String version) throws RemoteException {
+        return stub.apiAvailable(serviceName, version);
     }
 
 
@@ -130,7 +132,7 @@ public class APIPublisherClient {
      */
     public boolean unpublishAPI(ServiceMetaData serviceMetaData) throws RemoteException {
         String serviceId = serviceMetaData.getName();
-        return stub.removeApi(serviceId,"1.0.0");
+        return stub.removeApi(serviceId, "1.0.0");
     }
 
 
@@ -166,7 +168,29 @@ public class APIPublisherClient {
      * @throws RemoteException
      */
     public long checkNumberOfSubcriptions(String serviceName) throws RemoteException {
-        return stub.viewSubscriptions(serviceName,"1.0.0");
+        return stub.viewSubscriptions(serviceName, "1.0.0");
 
+    }
+
+    /**
+     * To get the current version of the API
+     *
+     * @param serviceName name of the service
+     * @return the current API version
+     * @throws RemoteException
+     */
+    public String getCurrentApiVersion(String serviceName) throws RemoteException {
+        API[] apiArray = stub.listApi(serviceName);
+        return apiArray[apiArray.length - 1].getApiVersion();
+    }
+
+    public String getPublishedDate(String serviceName, String version) throws RemoteException {
+        LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
+        return cycleEventDaos[0].getDate().toString();
+    }
+
+    public String getUpdatedDate(String serviceName, String version) throws RemoteException {
+        LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
+        return cycleEventDaos[cycleEventDaos.length-1].getDate().toString();
     }
 }

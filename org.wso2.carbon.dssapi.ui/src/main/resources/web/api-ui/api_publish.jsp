@@ -28,8 +28,8 @@
     <%
         String serviceName = CharacterEncoder.getSafeText(request.getParameter("serviceName"));
         String version = CharacterEncoder.getSafeText(request.getParameter("version"));
-        if(version==null)
-            version="1.0.0";
+        if (version == null)
+            version = "1.0.0";
         if (serviceName == null || serviceName.trim().length() == 0) {
     %>
     <p><fmt:message key="service.name.cannot.be.null"/></p>
@@ -46,7 +46,7 @@
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
             ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
             client.publishAPI(service, version);
-            boolean isAPIAvailable = client.isAPIAvailable(service);
+            boolean isAPIAvailable = client.isAPIAvailable(service, version);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("APIAvailability", isAPIAvailable);
