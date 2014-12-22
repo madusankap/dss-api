@@ -151,8 +151,6 @@
         function unpublishAPI() {
             alert('Unpublish API');
             try {
-                var version = document.getElementById("apiVersion").value;
-                alert(version);
                 var url = '../api-ui/api_unpublish.jsp?serviceName=<%=serviceName%>&version=' + version;
                 jQuery.ajax({
                     url: url,
