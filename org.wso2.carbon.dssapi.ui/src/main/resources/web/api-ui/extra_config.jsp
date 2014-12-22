@@ -67,7 +67,7 @@
                 <td><fmt:message key="update.date"/></td>
             </tr>
             <tr class="tableEvenRow">
-                <td colspan="2"><input type="button" value="Update API" onclick="changeState(false)" /> <input type="button" value="Unpublish API" /> </td>
+                <td colspan="2"><input type="button" value="Update API" onclick="" /> <input type="button" value="Unpublish API" onclick="unpublishAPI()" /> </td>
             </tr>
         <tr class="tableOddRow">
             <td colspan="2"><fmt:message key="publish.history"/></td>
@@ -81,10 +81,10 @@
         %>
             <tr class="tableOddRow">
                 <td>API Name : <input type="text" value="<%=serviceName%>" disabled style="width:80%" name="apiName" /> </td>
-                <td>Version : <input type="text" style="width:80%" name="apiVersion" /> </td>
+                <td>Version : <input type="text" style="width:80%" name="apiVersion" id="apiVersion" /> </td>
             </tr>
             <tr class="tableEvenRow">
-                <td colspan="2"><input type="button" value="Publish as an API" onclick="changeState(true)"></td>
+                <td colspan="2"><input type="button" value="Publish as an API" onclick="publishAPI()"></td>
             </tr>
         <%
             }
@@ -96,6 +96,64 @@
         function changeState(active) {
             try {
                 var url = '../api-ui/change_state.jsp?serviceName=<%=serviceName%>&isPublishRequest=' + active;
+                jQuery.ajax({
+                    url: url,
+                    async: false,
+                    type: "GET",
+                    cache: false,
+                    success: function () {
+                        <%
+                            //String successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
+                            //CarbonUIMessage.sendCarbonUIMessage(successMessage,CarbonUIMessage.INFO,request,response,"https://10.100.5.179:9443/carbon/service-mgt/service_info.jsp?serviceName="+serviceName);
+                         %>
+                        var successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
+                        alert(successMessage);
+                        location.reload(true);
+                    }
+                });
+            } catch (exception) {
+                alert(exception);
+            }
+        }
+    </script>
+
+    <script type="text/javascript">
+        jQuery.noConflict();
+        function publishAPI() {
+            alert('Publish API');
+            try {
+                var version = document.getElementById("apiVersion").value;
+                alert(version);
+                var url = '../api-ui/api_publish.jsp?serviceName=<%=serviceName%>&version=' + version;
+                jQuery.ajax({
+                    url: url,
+                    async: false,
+                    type: "GET",
+                    cache: false,
+                    success: function () {
+                        <%
+                            //String successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
+                            //CarbonUIMessage.sendCarbonUIMessage(successMessage,CarbonUIMessage.INFO,request,response,"https://10.100.5.179:9443/carbon/service-mgt/service_info.jsp?serviceName="+serviceName);
+                         %>
+                        var successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
+                        alert(successMessage);
+                        location.reload(true);
+                    }
+                });
+            } catch (exception) {
+                alert(exception);
+            }
+        }
+    </script>
+
+    <script type="text/javascript">
+        jQuery.noConflict();
+        function unpublishAPI() {
+            alert('Unpublish API');
+            try {
+                var version = document.getElementById("apiVersion").value;
+                alert(version);
+                var url = '../api-ui/api_unpublish.jsp?serviceName=<%=serviceName%>&version=' + version;
                 jQuery.ajax({
                     url: url,
                     async: false,
