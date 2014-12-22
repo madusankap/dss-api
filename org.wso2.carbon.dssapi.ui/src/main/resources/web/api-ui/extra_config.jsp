@@ -135,7 +135,7 @@
                             //String successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
                             //CarbonUIMessage.sendCarbonUIMessage(successMessage,CarbonUIMessage.INFO,request,response,"https://10.100.5.179:9443/carbon/service-mgt/service_info.jsp?serviceName="+serviceName);
                          %>
-                        var successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
+                        var successMessage = "API change request sent and currently being processing. Please reload the page after a few seconds.";
                         alert(successMessage);
                         location.reload(true);
                     }
@@ -164,7 +164,7 @@
                             //String successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
                             //CarbonUIMessage.sendCarbonUIMessage(successMessage,CarbonUIMessage.INFO,request,response,"https://10.100.5.179:9443/carbon/service-mgt/service_info.jsp?serviceName="+serviceName);
                          %>
-                        var successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
+                        var successMessage = "API change request sent and currently being processing. Please reload the page after a few seconds.";
                         alert(successMessage);
                         location.reload(true);
                     }
