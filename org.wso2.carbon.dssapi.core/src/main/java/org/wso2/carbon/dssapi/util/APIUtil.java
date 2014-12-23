@@ -51,7 +51,7 @@ import java.util.Set;
 public class APIUtil {
     private static final String HTTP_PORT = "mgt.transport.http.port";
     private static final String HOST_NAME = "carbon.local.ip";
-
+    private static final String APPLICATION_XML="_application.xml";
     /**
      * To get the API provider
      *
@@ -98,7 +98,7 @@ public class APIUtil {
                     DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
                 }
                 try {
-                    String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
+                    String applicationXmlPath = DSSRepositoryPath + "/" + serviceId +APPLICATION_XML;
                     File file = new File(applicationXmlPath);
                     if (!file.exists()) {
                         XMLStreamWriter xmlStreamWriter = DBUtils.getXMLOutputFactory().createXMLStreamWriter(new FileOutputStream(file));
@@ -215,11 +215,10 @@ public class APIUtil {
      * To make sure that the API is available for given service and to the given user of a given tenant
      *
      * @param serviceId service name of the service
-     * @param username  username of the logged user
      * @param tenantId  tenant domain
      * @return availability of the API
      */
-    public boolean apiAvailable(String serviceId, String username, int tenantId, String version) {
+    public boolean apiAvailable(String serviceId,int tenantId) {
         boolean apiAvailable = false;
         String DSSRepositoryPath;
         if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
@@ -228,7 +227,7 @@ public class APIUtil {
             DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
         }
         try {
-            String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
+            String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
             File file = new File(applicationXmlPath);
             if (file.exists()) {
                 XMLStreamReader parser = DBUtils.getXMLInputFactory().createXMLStreamReader(
