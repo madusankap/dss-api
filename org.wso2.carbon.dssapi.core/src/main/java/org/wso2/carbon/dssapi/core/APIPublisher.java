@@ -43,10 +43,9 @@ public class APIPublisher {
      * @param serviceName name of the service
      * @return availability of api to DataServices
      */
-    public boolean apiAvailable(String serviceName, String version) {
+    public boolean apiAvailable(String serviceName) {
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
-        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        return new APIUtil().apiAvailable(serviceName, username, tenantId, version);
+        return new APIUtil().apiAvailable(serviceName,tenantId);
     }
 
     /**
