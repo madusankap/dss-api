@@ -27,6 +27,7 @@ import org.wso2.carbon.dataservices.core.admin.DataServiceAdmin;
 import org.wso2.carbon.dataservices.ui.beans.Data;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.util.APIUtil;
+
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -36,22 +37,23 @@ import java.util.List;
  * To handle the API operations
  */
 public class APIPublisher {
-      /**
+    /**
      * To check whether API is available for the given service or not
      *
-     * @param ServiceName name of the service
+     * @param serviceName name of the service
      * @return availability of api to DataServices
      */
-    public boolean apiAvailable(String ServiceName, String version) {
+    public boolean apiAvailable(String serviceName, String version) {
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        return new APIUtil().apiAvailable(ServiceName, username, tenantId, version);
+        return new APIUtil().apiAvailable(serviceName, username, tenantId, version);
     }
 
     /**
      * To check whether API have active Subscriptions for the given service or not
      *
      * @param serviceName name of the service
+     * @param version     version of the api
      * @return no of subscriptions to api to that  DataServices
      */
     public long viewSubscriptions(String serviceName, String version) {
@@ -98,7 +100,7 @@ public class APIPublisher {
      * To add an API for a service
      *
      * @param serviceId service id of the service
-     * @throws Exception
+     * @param version   version of the api
      */
     public boolean addApi(String serviceId, String version) {
         String serviceContents;
@@ -132,25 +134,19 @@ public class APIPublisher {
         try {
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
             String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-          Status=  new APIUtil().removeApi(serviceId, username, tenantDomain, version);
-             } catch (Exception e) {
+            Status = new APIUtil().removeApi(serviceId, username, tenantDomain, version);
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return Status;
     }
-
-    /**
-     * To remove the API
-     *
-     * @param serviceId service id of the service
-     * @return api is removed from api manager
-     */
 
 
     /**
      * To update an API for a service
      *
      * @param serviceId service id of the service
+     * @param version   version of the api
      * @throws Exception
      */
     public boolean updateApi(String serviceId, String version) {

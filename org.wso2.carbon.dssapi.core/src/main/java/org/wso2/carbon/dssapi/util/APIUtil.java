@@ -25,8 +25,6 @@ import org.apache.axis2.Constants;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.model.*;
-import org.wso2.carbon.apimgt.core.APIManagerConstants;
-import org.wso2.carbon.apimgt.core.APIManagerErrorConstants;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
 import org.wso2.carbon.context.CarbonContext;
@@ -69,56 +67,59 @@ public class APIUtil {
         }
         return null;
     }
-   /**
+
+    /**
      * To add an API
      *
      * @param serviceId  service name of the service
      * @param username   username of the logged user
      * @param tenantName tenant of the logged user
+     * @param data       data service object
+     * @param version    version of the api
      */
-    public void addApi(String serviceId, String username, String tenantName,Data data,String version) {
-                  APIProvider apiProvider;
-           if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
-                apiProvider = getAPIProvider(username);
-            } else {
-                 apiProvider = getAPIProvider(username + "@" + tenantName);
-            }
-        API api=createApiObject(serviceId,username,tenantName,data,version,apiProvider);
+    public void addApi(String serviceId, String username, String tenantName, Data data, String version) {
+        APIProvider apiProvider;
+        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
+            apiProvider = getAPIProvider(username);
+        } else {
+            apiProvider = getAPIProvider(username + "@" + tenantName);
+        }
+        API api = createApiObject(serviceId, username, tenantName, data, version, apiProvider);
 
         if (api != null) {
+            try {
+                apiProvider.addAPI(api);
+                String DSSRepositoryPath;
+                int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+                if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
+                    DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
+                } else {
+                    DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
+                }
                 try {
-                  apiProvider.addAPI(api);
-                    String DSSRepositoryPath;
-                    int tenantId=CarbonContext.getThreadLocalCarbonContext().getTenantId();
-
-                    if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
-                        DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
-                    } else {
-                        DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
+                    String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
+                    File file = new File(applicationXmlPath);
+                    if (!file.exists()) {
+                        XMLStreamWriter xmlStreamWriter = DBUtils.getXMLOutputFactory().createXMLStreamWriter(new FileOutputStream(file));
+                        xmlStreamWriter.writeStartDocument();
+                        xmlStreamWriter.writeStartElement("managedApi");
+                        xmlStreamWriter.writeCharacters("true");
+                        xmlStreamWriter.writeEndElement();
+                        xmlStreamWriter.writeEndDocument();
+                        xmlStreamWriter.flush();
+                        xmlStreamWriter.close();
                     }
-                    try {
-                        String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
-                        File file = new File(applicationXmlPath);
-                        if (!file.exists()) {
-                            XMLStreamWriter xmlStreamWriter = DBUtils.getXMLOutputFactory().createXMLStreamWriter(new FileOutputStream(file));
-                            xmlStreamWriter.writeStartDocument();
-                            xmlStreamWriter.writeStartElement("managedApi");
-                            xmlStreamWriter.writeCharacters("true");
-                            xmlStreamWriter.writeEndElement();
-                            xmlStreamWriter.writeEndDocument();
-                            xmlStreamWriter.flush();
-                            xmlStreamWriter.close();
-                        }
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    } catch (XMLStreamException e) {
-                        e.printStackTrace();
-                    }
-
-                     } catch (APIManagementException e) {
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (XMLStreamException e) {
                     e.printStackTrace();
                 }
+
+            } catch (APIManagementException e) {
+                e.printStackTrace();
             }
+        }
     }
 
     /**
@@ -129,14 +130,15 @@ public class APIUtil {
      * @param apiEndpoint Endpoint url
      * @param authType    Authentication type
      * @param identifier  API identifier
+     * @param data        data service object
      * @return API model
      */
-    private API createAPIModel(APIProvider apiProvider, String apiContext, String apiEndpoint, String authType, APIIdentifier identifier,Data data) {
+    private API createAPIModel(APIProvider apiProvider, String apiContext, String apiEndpoint, String authType, APIIdentifier identifier, Data data) {
         API api = null;
         try {
             api = new API(identifier);
             api.setContext(apiContext);
-            api.setUriTemplates(getURITemplates(apiEndpoint, authType,data));
+            api.setUriTemplates(getURITemplates(apiEndpoint, authType, data));
             api.setVisibility(APIConstants.API_GLOBAL_VISIBILITY);
             api.addAvailableTiers(apiProvider.getTiers());
             api.setEndpointSecured(false);
@@ -147,7 +149,7 @@ public class APIUtil {
             api.setImplementation("endpoint");
             String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint + "\",\"config\":null},\"endpoint_type\":\"http\"}";
             api.setEndpointConfig(endpointConfig);
-             } catch (APIManagementException e) {
+        } catch (APIManagementException e) {
             e.printStackTrace();
         }
         return api;
@@ -158,16 +160,17 @@ public class APIUtil {
      *
      * @param endpoint Endpoint URL
      * @param authType Authentication type
+     * @param data     data service object
      * @return URI templates
      */
-    private Set<URITemplate> getURITemplates(String endpoint, String authType,Data data) {
+    private Set<URITemplate> getURITemplates(String endpoint, String authType, Data data) {
         //todo improve to add sub context paths for uri templates as well
         Set<URITemplate> uriTemplates = new LinkedHashSet<URITemplate>();
-        ArrayList<Operation> operations=data.getOperations();
-        ArrayList<Resource> resourceList=data.getResources();
+        ArrayList<Operation> operations = data.getOperations();
+        ArrayList<Resource> resourceList = data.getResources();
 
-           if (authType.equals(APIConstants.AUTH_NO_AUTHENTICATION)) {
-               for (Resource resource:resourceList) {
+        if (authType.equals(APIConstants.AUTH_NO_AUTHENTICATION)) {
+            for (Resource resource : resourceList) {
                 URITemplate template = new URITemplate();
                 template.setAuthType(APIConstants.AUTH_NO_AUTHENTICATION);
                 template.setHTTPVerb(resource.getMethod());
@@ -175,24 +178,24 @@ public class APIUtil {
                 template.setUriTemplate("/" + resource.getPath());
                 uriTemplates.add(template);
             }
-               for (Operation operation:operations) {
-                   URITemplate template = new URITemplate();
-                   template.setAuthType(APIConstants.AUTH_NO_AUTHENTICATION);
-                   template.setHTTPVerb("POST");
-                   template.setResourceURI(endpoint);
-                   template.setUriTemplate("/" + operation.getName());
-                   uriTemplates.add(template);
-               }
+            for (Operation operation : operations) {
+                URITemplate template = new URITemplate();
+                template.setAuthType(APIConstants.AUTH_NO_AUTHENTICATION);
+                template.setHTTPVerb("POST");
+                template.setResourceURI(endpoint);
+                template.setUriTemplate("/" + operation.getName());
+                uriTemplates.add(template);
+            }
         } else {
-               for (Operation operation:operations) {
-                   URITemplate template = new URITemplate();
-                   template.setAuthType(APIConstants.AUTH_APPLICATION_OR_USER_LEVEL_TOKEN);
-                   template.setHTTPVerb("POST");
-                   template.setResourceURI(endpoint);
-                   template.setUriTemplate("/"+operation.getName());
-                   uriTemplates.add(template);
-               }
-            for (Resource resource:resourceList) {
+            for (Operation operation : operations) {
+                URITemplate template = new URITemplate();
+                template.setAuthType(APIConstants.AUTH_APPLICATION_OR_USER_LEVEL_TOKEN);
+                template.setHTTPVerb("POST");
+                template.setResourceURI(endpoint);
+                template.setUriTemplate("/" + operation.getName());
+                uriTemplates.add(template);
+            }
+            for (Resource resource : resourceList) {
                 URITemplate template = new URITemplate();
                 if (!"OPTIONS".equals(resource.getMethod())) {
                     template.setAuthType(APIConstants.AUTH_APPLICATION_OR_USER_LEVEL_TOKEN);
@@ -201,7 +204,7 @@ public class APIUtil {
                 }
                 template.setHTTPVerb(resource.getMethod());
                 template.setResourceURI(endpoint);
-                template.setUriTemplate("/"+resource.getPath());
+                template.setUriTemplate("/" + resource.getPath());
                 uriTemplates.add(template);
             }
         }
@@ -211,66 +214,67 @@ public class APIUtil {
     /**
      * To make sure that the API is available for given service and to the given user of a given tenant
      *
-     * @param serviceId    service name of the service
-     * @param username     username of the logged user
-     * @param tennantId tenant domain
+     * @param serviceId service name of the service
+     * @param username  username of the logged user
+     * @param tenantId  tenant domain
      * @return availability of the API
      */
-    public boolean apiAvailable(String serviceId, String username, int tennantId,String version) {
+    public boolean apiAvailable(String serviceId, String username, int tenantId, String version) {
         boolean apiAvailable = false;
         String DSSRepositoryPath;
-        if (tennantId == MultitenantConstants.SUPER_TENANT_ID) {
+        if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
             DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
         } else {
-            DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tennantId + "/dataservices";
+            DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
         }
-            try {
-                String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
-                File file = new File(applicationXmlPath);
-                if (file.exists()) {
-                    XMLStreamReader parser = DBUtils.getXMLInputFactory().createXMLStreamReader(
-                            new FileInputStream(file));
-                    StAXOMBuilder builder = new StAXOMBuilder(parser);
-                    OMElement documentElement = builder.getDocumentElement();
-                    if (documentElement.getLocalName().equals("managedApi") && "true".equals(documentElement.getText())) {
-                        apiAvailable = true;
-                    }
+        try {
+            String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
+            File file = new File(applicationXmlPath);
+            if (file.exists()) {
+                XMLStreamReader parser = DBUtils.getXMLInputFactory().createXMLStreamReader(
+                        new FileInputStream(file));
+                StAXOMBuilder builder = new StAXOMBuilder(parser);
+                OMElement documentElement = builder.getDocumentElement();
+                if (documentElement.getLocalName().equals("managedApi") && "true".equals(documentElement.getText())) {
+                    apiAvailable = true;
                 }
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (XMLStreamException e) {
-                e.printStackTrace();
             }
-            return apiAvailable;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (XMLStreamException e) {
+            e.printStackTrace();
         }
+        return apiAvailable;
+    }
 
-        /**
+    /**
      * To make sure that the API having active subscriptions for given service
+     *
      * @param serviceId    service name of the service
      * @param username     username of the logged user
      * @param tenantDomain tenant domain
      * @return availability of the API
      */
-    public long apiSubscriptions(String serviceId, String username, String tenantDomain,String version) {
+    public long apiSubscriptions(String serviceId, String username, String tenantDomain, String version) {
         long subscriptionCount = 0;
-            APIProvider apiProvider;
-            String provider;
-           if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                provider = username;
-                apiProvider = getAPIProvider(username);
-           } else {
-               provider = username + "-AT-" + tenantDomain;
-                apiProvider = getAPIProvider(username + "@" + tenantDomain);
-            }
-            String apiVersion = version;
-            String apiName = serviceId;
+        APIProvider apiProvider;
+        String provider;
+        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+            provider = username;
+            apiProvider = getAPIProvider(username);
+        } else {
+            provider = username + "-AT-" + tenantDomain;
+            apiProvider = getAPIProvider(username + "@" + tenantDomain);
+        }
+        String apiVersion = version;
+        String apiName = serviceId;
 
-            APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
-            try {
-                subscriptionCount = apiProvider.getAPISubscriptionCountByAPI(identifier);
-            } catch (APIManagementException e) {
-                e.printStackTrace();
-            }
+        APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
+        try {
+            subscriptionCount = apiProvider.getAPISubscriptionCountByAPI(identifier);
+        } catch (APIManagementException e) {
+            e.printStackTrace();
+        }
         return subscriptionCount;
     }
 
@@ -280,78 +284,90 @@ public class APIUtil {
      * @param serviceId    service name of the service
      * @param username     username of the logged user
      * @param tenantDomain tenant domain
+     * @param version      version of the api
      */
-    public boolean removeApi(String serviceId, String username, String tenantDomain,String version) {
-        boolean status=false;
-            APIProvider apiProvider;
-            String provider;
+    public boolean removeApi(String serviceId, String username, String tenantDomain, String version) {
+        boolean status = false;
+        APIProvider apiProvider;
+        String provider;
 
-            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-               provider = username;
-                apiProvider = getAPIProvider(username);
-            } else {
-               provider = username + "-AT-" + tenantDomain;
-                apiProvider = getAPIProvider(username + "@" + tenantDomain);
-            }
-            String apiVersion = version;
-
-            String apiName = serviceId;
-
-            APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
-            try {
-                if (apiProvider.checkIfAPIExists(identifier)) {
-                    apiProvider.deleteAPI(identifier);
-                }
-                String DSSRepositoryPath;
-                int tenantId=CarbonContext.getThreadLocalCarbonContext().getTenantId();
-
-                if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
-                    DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
-                } else {
-                    DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
-                }
-                   String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
-                    File file = new File(applicationXmlPath);
-                    if (file.exists()) {
-                      if(file.delete()){
-                        status=true;
-                      }
-                    }
-            } catch (APIManagementException e) {
-                e.printStackTrace();
-            }
-        return status;
+        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+            provider = username;
+            apiProvider = getAPIProvider(username);
+        } else {
+            provider = username + "-AT-" + tenantDomain;
+            apiProvider = getAPIProvider(username + "@" + tenantDomain);
         }
-    public List<API> getApi(String serviceId, String username, String tenantDomain){
-        List<API> apiList = null;
-                   APIProvider apiProvider;
-            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                apiProvider = getAPIProvider(username);
-            } else {
-                apiProvider = getAPIProvider(username + "@" + tenantDomain);
+        String apiVersion = version;
+
+        String apiName = serviceId;
+
+        APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
+        try {
+            if (apiProvider.checkIfAPIExists(identifier)) {
+                apiProvider.deleteAPI(identifier);
             }
-        try{
-            apiList= apiProvider.searchAPIs(serviceId, "default", username);
+            String DSSRepositoryPath;
+            int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+            if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
+                DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
+            } else {
+                DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
+            }
+            String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
+            File file = new File(applicationXmlPath);
+            if (file.exists()) {
+                if (file.delete()) {
+                    status = true;
+                }
+            }
+        } catch (APIManagementException e) {
+            e.printStackTrace();
+        }
+        return status;
+    }
+
+    /**
+     * To get the list of APIs
+     *
+     * @param serviceId    service name of the service
+     * @param username     username of the logged user
+     * @param tenantDomain tenant domain
+     * @return api list according to the given parameters
+     */
+    public List<API> getApi(String serviceId, String username, String tenantDomain) {
+        List<API> apiList = null;
+        APIProvider apiProvider;
+        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+            apiProvider = getAPIProvider(username);
+        } else {
+            apiProvider = getAPIProvider(username + "@" + tenantDomain);
+        }
+        try {
+            apiList = apiProvider.searchAPIs(serviceId, "default", username);
         } catch (APIManagementException e) {
             e.printStackTrace();
         }
         return apiList;
     }
+
     /**
      * To update an API
      *
      * @param serviceId  service name of the service
      * @param username   username of the logged user
      * @param tenantName tenant of the logged user
+     * @param version    version of the api
      */
-    public void updateApi(String serviceId, String username, String tenantName,Data data,String version) {
+    public void updateApi(String serviceId, String username, String tenantName, Data data, String version) {
         APIProvider apiProvider;
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
-            apiProvider = getAPIProvider(username+"@");
+            apiProvider = getAPIProvider(username + "@");
         } else {
             apiProvider = getAPIProvider(username + "@" + tenantName);
         }
-        API api=createApiObject(serviceId,username,tenantName,data,version,apiProvider);
+        API api = createApiObject(serviceId, username, tenantName, data, version, apiProvider);
         if (api != null) {
             try {
                 apiProvider.updateAPI(api);
@@ -360,71 +376,83 @@ public class APIUtil {
             }
         }
     }
+
     /**
      * To update an API
      *
      * @param serviceId  service name of the service
      * @param username   username of the logged user
      * @param tenantName tenant of the logged user
+     * @param version    version of the api
      */
-    public LifeCycleEventDao[] getLifeCycleEventList(String serviceId, String username, String tenantName,String version) {
+    public LifeCycleEventDao[] getLifeCycleEventList(String serviceId, String username, String tenantName, String version) {
         APIProvider apiProvider;
         List<LifeCycleEvent> lifeCycleEventList;
-      List<LifeCycleEventDao> lifeCycleEventDaoList=new ArrayList<LifeCycleEventDao>();
+        List<LifeCycleEventDao> lifeCycleEventDaoList = new ArrayList<LifeCycleEventDao>();
         String provider;
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
             apiProvider = getAPIProvider(username);
-            provider=username;
+            provider = username;
         } else {
             provider = username + "-AT-" + tenantName;
             apiProvider = getAPIProvider(username + "@" + tenantName);
         }
-       APIIdentifier apiIdentifier=new APIIdentifier(provider,serviceId,version);
+        APIIdentifier apiIdentifier = new APIIdentifier(provider, serviceId, version);
         if (apiIdentifier != null) {
             try {
-           lifeCycleEventList=apiProvider.getLifeCycleEvents(apiIdentifier);
-        if(lifeCycleEventList.size()>0){
+                lifeCycleEventList = apiProvider.getLifeCycleEvents(apiIdentifier);
+                if (lifeCycleEventList.size() > 0) {
 
-            for (LifeCycleEvent lifeCycleEvent:lifeCycleEventList) {
-                LifeCycleEventDao lifeCycleEventDao;
+                    for (LifeCycleEvent lifeCycleEvent : lifeCycleEventList) {
+                        LifeCycleEventDao lifeCycleEventDao;
 
-                if ((lifeCycleEvent.getOldStatus()!=null)){
-                     lifeCycleEventDao=new LifeCycleEventDao(apiIdentifier,lifeCycleEvent.getOldStatus().name(),lifeCycleEvent.getNewStatus().name(),lifeCycleEvent.getUserId(),lifeCycleEvent.getDate());
-                                  }
-                else{
-                    lifeCycleEventDao=new LifeCycleEventDao(apiIdentifier,"",lifeCycleEvent.getNewStatus().name(),lifeCycleEvent.getUserId(),lifeCycleEvent.getDate());
+                        if ((lifeCycleEvent.getOldStatus() != null)) {
+                            lifeCycleEventDao = new LifeCycleEventDao(apiIdentifier, lifeCycleEvent.getOldStatus().name(), lifeCycleEvent.getNewStatus().name(), lifeCycleEvent.getUserId(), lifeCycleEvent.getDate());
+                        } else {
+                            lifeCycleEventDao = new LifeCycleEventDao(apiIdentifier, "", lifeCycleEvent.getNewStatus().name(), lifeCycleEvent.getUserId(), lifeCycleEvent.getDate());
+                        }
+                        lifeCycleEventDaoList.add(lifeCycleEventDao);
+                    }
                 }
-                lifeCycleEventDaoList.add(lifeCycleEventDao);
-            }
-        }
             } catch (APIManagementException e) {
                 e.printStackTrace();
             }
         }
-       return lifeCycleEventDaoList.toArray(new LifeCycleEventDao[lifeCycleEventDaoList.size()]);
+        return lifeCycleEventDaoList.toArray(new LifeCycleEventDao[lifeCycleEventDaoList.size()]);
     }
-    private API createApiObject(String ServiceId, String username, String tenantName,Data data,String version,APIProvider apiProvider){
+
+    /**
+     * To create API model
+     * @param serviceId service name of the service
+     * @param username username of the logged user
+     * @param tenantName tenant of the logged user
+     * @param data data service object
+     * @param version version of the api
+     * @param apiProvider API Provider
+     * @return created api model
+     */
+    private API createApiObject(String serviceId, String username, String tenantName, Data data, String version, APIProvider apiProvider) {
         String providerName;
         String apiEndpoint;
         String apiContext;
 
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
             providerName = username;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" + ServiceId ;
-            apiContext = "/api/" + ServiceId;
-         } else {
+            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" + serviceId;
+            apiContext = "/api/" + serviceId;
+        } else {
             providerName = username + "-AT-" + tenantName;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + ServiceId;
-            apiContext = "/api/t/" + tenantName + "/" + ServiceId;
+            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + serviceId;
+            apiContext = "/api/t/" + tenantName + "/" + serviceId;
         }
 
-        String provider = providerName; //todo get correct provider(username) for tenants
+        String provider = providerName;
         String apiVersion;
-            apiVersion=version;
-        String apiName = ServiceId;
+        apiVersion = version;
+        String apiName = serviceId;
         String authType = "Any";
         APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
-        return createAPIModel(apiProvider, apiContext, apiEndpoint, authType, identifier,data);
+        return createAPIModel(apiProvider, apiContext, apiEndpoint, authType, identifier, data);
     }
 }
 

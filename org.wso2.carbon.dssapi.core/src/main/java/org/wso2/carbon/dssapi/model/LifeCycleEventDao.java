@@ -1,7 +1,6 @@
 package org.wso2.carbon.dssapi.model;
 
 import org.wso2.carbon.apimgt.api.model.APIIdentifier;
-import org.wso2.carbon.apimgt.api.model.APIStatus;
 
 import java.io.Serializable;
 import java.util.Date;

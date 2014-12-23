@@ -7,7 +7,7 @@ import java.util.Date;
  * Created by tharindud on 12/18/14.
  */
 public class API implements Serializable {
-   private String apiName;
+    private String apiName;
     private String apiVersion;
     private Date lastUpdated;
     private String status;
