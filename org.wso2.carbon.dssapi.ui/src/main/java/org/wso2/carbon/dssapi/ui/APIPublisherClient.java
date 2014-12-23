@@ -18,12 +18,10 @@
  */
 package org.wso2.carbon.dssapi.ui;
 
-
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.client.Options;
 import org.apache.axis2.client.ServiceClient;
 import org.apache.axis2.context.ConfigurationContext;
-import org.wso2.carbon.apimgt.api.model.LifeCycleEvent;
 import org.wso2.carbon.dssapi.model.xsd.API;
 import org.wso2.carbon.dssapi.model.xsd.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.stub.APIPublisherException;
@@ -53,8 +51,6 @@ public class APIPublisherClient {
         Options option = client.getOptions();
         option.setManageSession(true);
         option.setProperty(org.apache.axis2.transport.http.HTTPConstants.COOKIE_STRING, cookie);
-
-
     }
 
     /**
@@ -104,12 +100,11 @@ public class APIPublisherClient {
 
     /**
      * @param serviceName name of the service
-     * @param version     version of the api
      * @return api availability
      * @throws RemoteException
      */
-    public boolean isAPIAvailable(String serviceName, String version) throws RemoteException {
-        return stub.apiAvailable(serviceName, version);
+    public boolean isAPIAvailable(String serviceName) throws RemoteException {
+        return stub.apiAvailable(serviceName, "");
     }
 
 
