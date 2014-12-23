@@ -30,21 +30,12 @@
     String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
     ConfigurationContext configContext =
             (ConfigurationContext) config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
-
-    //String webContext = (String) request.getAttribute(CarbonConstants.WEB_CONTEXT);
-    //CarbonContext context = CarbonContext.getThreadLocalCarbonContext();
-
-
     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
     APIPublisherClient client = null;
-    //ServiceMetaData service = null;
     try {
         client = new APIPublisherClient(cookie, backendServerURL, configContext);
-        //service = client.getServiceData(serviceName).getServices()[0];
         apiVersion = client.getCurrentApiVersion(serviceName);
-
-        APIAvailability = client.isAPIAvailable(serviceName, "1.0.0");
-        //System.out.println("Current API Version" + apiVersion);
+        APIAvailability = client.isAPIAvailable(serviceName);
     } catch (Exception e) {
         response.setStatus(500);
         CarbonUIMessage uiMsg = new CarbonUIMessage(CarbonUIMessage.ERROR, e.getMessage(), e);
@@ -76,26 +67,26 @@
         </tr>
         <tr class="tableOddRow">
             <td colspan="2">
-                <strong><fmt:message key="publish.history"/></strong> <br />
+                <strong><fmt:message key="publish.history"/></strong> <br/>
                 <%
                     LifeCycleEventDao[] cycleEventDaos = client.getLifeCycleEvents(serviceName, apiVersion);
                     for (int i = 0; i < cycleEventDaos.length; i++) { %>
                 <div style="margin-left: 5px;padding-top: 5px">
-                    <span style="background-image: url('../api-ui/images/info.png'); background-repeat: no-repeat;background-size: 18px 16px;padding-left: 18px" ><%=cycleEventDaos[i].getDate()%>&nbsp;&nbsp;</span>
+                    <span style="background-image: url('../api-ui/images/info.png'); background-repeat: no-repeat;background-size: 18px 16px;padding-left: 18px"><%=cycleEventDaos[i].getDate()%>&nbsp;&nbsp;</span>
                     <span style="background-image: url('../api-ui/images/user.png');background-repeat: no-repeat;background-size: 16px 16px;padding-left: 18px"><%=cycleEventDaos[i].getUserId()%>&nbsp;&nbsp;</span>
                     <%
-                        if(cycleEventDaos[i].getOldStatus()!="") {
+                        if (cycleEventDaos[i].getOldStatus() != "") {
                     %>
-                    <span >Changed status <%=cycleEventDaos[i].getOldStatus()%> to </span>
+                    <span>State changed from <strong><%=cycleEventDaos[i].getOldStatus()%></strong> to </span>
                     <%
                         }
                     %>
-                    <span ><%=cycleEventDaos[i].getNewStatus()%>&nbsp;&nbsp;</span>
+                    <span><strong><%=cycleEventDaos[i].getNewStatus()%></strong></span>
                 </div>
                 <%
                     }
                 %>
-                <br />
+                <br/>
             </td>
         </tr>
         <tr class="tableEvenRow">

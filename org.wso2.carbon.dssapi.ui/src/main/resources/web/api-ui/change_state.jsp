@@ -19,7 +19,6 @@
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.dssapi.ui.APIPublisherClient" %>
-<%@ page import="org.wso2.carbon.service.mgt.xsd.ServiceMetaData" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -28,7 +27,6 @@
     <%
         String serviceName = CharacterEncoder.getSafeText(request.getParameter("serviceName"));
         String isPublishRequest = CharacterEncoder.getSafeText(request.getParameter("isPublishRequest"));
-
         if (serviceName == null || serviceName.trim().length() == 0) {
     %>
     <p><fmt:message key="service.name.cannot.be.null"/></p>
@@ -47,12 +45,12 @@
             String currentVersion = client.getCurrentApiVersion(serviceName);
             if (!isPublishRequestBool) {
                 if (client.checkNumberOfSubcriptions(serviceName, currentVersion) == 0)
-                    client.unpublishAPI(serviceName, );
+                    client.unpublishAPI(serviceName, currentVersion);
             } else
-                client.publishAPI(client.getServiceData(serviceName).getServices()[0], currentVersion);
+                client.publishAPI(serviceName, currentVersion);
 
             //ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
-            boolean isAPIAvailable = client.isAPIAvailable(serviceName, currentVersion);
+            boolean isAPIAvailable = client.isAPIAvailable(serviceName);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("isAvailable", isPublishRequest);

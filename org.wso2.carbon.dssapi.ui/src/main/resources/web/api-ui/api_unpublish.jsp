@@ -19,7 +19,6 @@
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.dssapi.ui.APIPublisherClient" %>
-<%@ page import="org.wso2.carbon.service.mgt.xsd.ServiceMetaData" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -48,7 +47,7 @@
             String currentVersion = client.getCurrentApiVersion(serviceName);
             if(client.checkNumberOfSubcriptions(serviceName, currentVersion)==0)
                 client.unpublishAPI(serviceName, currentVersion);
-            boolean isAPIAvailable = client.isAPIAvailable(serviceName, currentVersion);
+            boolean isAPIAvailable = client.isAPIAvailable(serviceName);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("APIAvailability", isAPIAvailable);
