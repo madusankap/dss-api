@@ -1,12 +1,10 @@
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
+<%@ page import="org.wso2.carbon.dssapi.model.xsd.LifeCycleEventDao" %>
 <%@ page import="org.wso2.carbon.dssapi.ui.APIPublisherClient" %>
-<%@ page import="org.wso2.carbon.service.mgt.xsd.ServiceMetaData" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
-<%@ page import="org.wso2.carbon.context.CarbonContext" %>
-<%@ page import="org.osgi.framework.BundleContext" %>
 <!--
 ~ Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
 ~
@@ -27,23 +25,26 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%
     String serviceName = request.getParameter("serviceName");
+    String apiVersion = "1.0.0";
     boolean APIAvailability = false;
     String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
     ConfigurationContext configContext =
             (ConfigurationContext) config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
 
-    String webContext = (String) request.getAttribute(CarbonConstants.WEB_CONTEXT);
-    CarbonContext context = CarbonContext.getThreadLocalCarbonContext();
+    //String webContext = (String) request.getAttribute(CarbonConstants.WEB_CONTEXT);
+    //CarbonContext context = CarbonContext.getThreadLocalCarbonContext();
 
 
     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
     APIPublisherClient client = null;
-    ServiceMetaData service = null;
+    //ServiceMetaData service = null;
     try {
         client = new APIPublisherClient(cookie, backendServerURL, configContext);
-        service = client.getServiceData(serviceName).getServices()[0];
+        //service = client.getServiceData(serviceName).getServices()[0];
+        apiVersion = client.getCurrentApiVersion(serviceName);
 
-        APIAvailability = client.isAPIAvailable(service);
+        APIAvailability = client.isAPIAvailable(serviceName, "1.0.0");
+        //System.out.println("Current API Version" + apiVersion);
     } catch (Exception e) {
         response.setStatus(500);
         CarbonUIMessage uiMsg = new CarbonUIMessage(CarbonUIMessage.ERROR, e.getMessage(), e);
@@ -60,32 +61,57 @@
         <%
             if (APIAvailability) {
         %>
-            <tr class="tableOddRow">
-                <td><fmt:message key="published.date"/>
-                <%=service.getServiceDeployedTime()%>
-                </td>
-                <td><fmt:message key="update.date"/></td>
-            </tr>
-            <tr class="tableEvenRow">
-                <td colspan="2"><input type="button" value="Update API" onclick="" /> <input type="button" value="Unpublish API" onclick="unpublishAPI()" /> </td>
-            </tr>
         <tr class="tableOddRow">
-            <td colspan="2"><fmt:message key="publish.history"/></td>
+            <td><fmt:message key="published.date"/> :
+                <%=client.getPublishedDate(serviceName, apiVersion)%>
+            </td>
+            <td><fmt:message key="update.date"/> :
+                <%=client.getUpdatedDate(serviceName, apiVersion)%>
+            </td>
+        </tr>
+        <tr class="tableEvenRow">
+            <td colspan="2"><input type="button" value="Update API" onclick=""/> <input type="button"
+                                                                                        value="Unpublish API"
+                                                                                        onclick="unpublishAPI()"/></td>
+        </tr>
+        <tr class="tableOddRow">
+            <td colspan="2">
+                <strong><fmt:message key="publish.history"/></strong> <br />
+                <%
+                    LifeCycleEventDao[] cycleEventDaos = client.getLifeCycleEvents(serviceName, apiVersion);
+                    for (int i = 0; i < cycleEventDaos.length; i++) { %>
+                <div style="margin-left: 5px;padding-top: 5px">
+                    <span style="background-image: url('../api-ui/images/info.png'); background-repeat: no-repeat;background-size: 18px 16px;padding-left: 18px" ><%=cycleEventDaos[i].getDate()%>&nbsp;&nbsp;</span>
+                    <span style="background-image: url('../api-ui/images/user.png');background-repeat: no-repeat;background-size: 16px 16px;padding-left: 18px"><%=cycleEventDaos[i].getUserId()%>&nbsp;&nbsp;</span>
+                    <%
+                        if(cycleEventDaos[i].getOldStatus()!="") {
+                    %>
+                    <span >Changed status <%=cycleEventDaos[i].getOldStatus()%> to </span>
+                    <%
+                        }
+                    %>
+                    <span ><%=cycleEventDaos[i].getNewStatus()%>&nbsp;&nbsp;</span>
+                </div>
+                <%
+                    }
+                %>
+                <br />
+            </td>
         </tr>
         <tr class="tableEvenRow">
 
         </tr>
 
         <%
-            } else {
+        } else {
         %>
-            <tr class="tableOddRow">
-                <td>API Name : <input type="text" value="<%=serviceName%>" disabled style="width:80%" name="apiName" /> </td>
-                <td>Version : <input type="text" style="width:80%" name="apiVersion" id="apiVersion" /> </td>
-            </tr>
-            <tr class="tableEvenRow">
-                <td colspan="2"><input type="button" value="Publish as an API" onclick="publishAPI()"></td>
-            </tr>
+        <tr class="tableOddRow">
+            <td>API Name : <input type="text" value="<%=serviceName%>" disabled style="width:80%" name="apiName"/></td>
+            <td>Version : <input type="text" style="width:80%" name="apiVersion" id="apiVersion"/></td>
+        </tr>
+        <tr class="tableEvenRow">
+            <td colspan="2"><input type="button" value="Publish as an API" onclick="publishAPI()"></td>
+        </tr>
         <%
             }
         %>

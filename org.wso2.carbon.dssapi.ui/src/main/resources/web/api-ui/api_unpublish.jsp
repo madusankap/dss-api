@@ -27,6 +27,7 @@
 <fmt:bundle basename="org.wso2.carbon.dssapi.ui.i18n.Resources">
     <%
         String serviceName = CharacterEncoder.getSafeText(request.getParameter("serviceName"));
+        //String currentVersion = CharacterEncoder.getSafeText(request.getParameter("version"));
         //String version = "1.0.0";
         //String isPublishRequest = CharacterEncoder.getSafeText(request.getParameter("isPublishRequest"));
         if (serviceName == null || serviceName.trim().length() == 0) {
@@ -43,10 +44,11 @@
         APIPublisherClient client;
         try {
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
-            ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
-            if(client.checkNumberOfSubcriptions(serviceName)==0)
-                client.unpublishAPI(service);
-            boolean isAPIAvailable = client.isAPIAvailable(service);
+            //ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
+            String currentVersion = client.getCurrentApiVersion(serviceName);
+            if(client.checkNumberOfSubcriptions(serviceName, currentVersion)==0)
+                client.unpublishAPI(serviceName, currentVersion);
+            boolean isAPIAvailable = client.isAPIAvailable(serviceName, currentVersion);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("APIAvailability", isAPIAvailable);
