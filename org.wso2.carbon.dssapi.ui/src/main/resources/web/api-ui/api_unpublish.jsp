@@ -44,11 +44,11 @@
         APIPublisherClient client;
         try {
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
-            ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
+            //ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
             String currentVersion = client.getCurrentApiVersion(serviceName);
             if(client.checkNumberOfSubcriptions(serviceName, currentVersion)==0)
-                client.unpublishAPI(service, currentVersion);
-            boolean isAPIAvailable = client.isAPIAvailable(service, currentVersion);
+                client.unpublishAPI(serviceName, currentVersion);
+            boolean isAPIAvailable = client.isAPIAvailable(serviceName, currentVersion);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("APIAvailability", isAPIAvailable);

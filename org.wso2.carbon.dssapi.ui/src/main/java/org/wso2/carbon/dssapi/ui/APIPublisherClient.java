@@ -23,13 +23,17 @@ import org.apache.axis2.AxisFault;
 import org.apache.axis2.client.Options;
 import org.apache.axis2.client.ServiceClient;
 import org.apache.axis2.context.ConfigurationContext;
-import org.wso2.carbon.dssapi.model.xsd.*;
+import org.wso2.carbon.apimgt.api.model.LifeCycleEvent;
+import org.wso2.carbon.dssapi.model.xsd.API;
+import org.wso2.carbon.dssapi.model.xsd.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.stub.APIPublisherException;
 import org.wso2.carbon.dssapi.stub.APIPublisherStub;
 import org.wso2.carbon.service.mgt.xsd.ServiceMetaData;
 import org.wso2.carbon.service.mgt.xsd.ServiceMetaDataWrapper;
 
 import java.rmi.RemoteException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * API publisher client to talk to stub
@@ -99,9 +103,8 @@ public class APIPublisherClient {
     }
 
     /**
-     *
      * @param serviceName name of the service
-     * @param version version of the api
+     * @param version     version of the api
      * @return api availability
      * @throws RemoteException
      */
@@ -126,13 +129,13 @@ public class APIPublisherClient {
     /**
      * To un-publish API for a given service
      *
-     * @param serviceMetaData service details
+     * @param serviceName name of the service
+     * @param version     version of the service
      * @return status of the operation
      * @throws RemoteException
      */
-    public boolean unpublishAPI(ServiceMetaData serviceMetaData) throws RemoteException {
-        String serviceId = serviceMetaData.getName();
-        return stub.removeApi(serviceId, "1.0.0");
+    public boolean unpublishAPI(String serviceName, String version) throws RemoteException {
+        return stub.removeApi(serviceName, version);
     }
 
 
@@ -167,8 +170,8 @@ public class APIPublisherClient {
      * @return number of subscriptions
      * @throws RemoteException
      */
-    public long checkNumberOfSubcriptions(String serviceName) throws RemoteException {
-        return stub.viewSubscriptions(serviceName, "1.0.0");
+    public long checkNumberOfSubcriptions(String serviceName, String version) throws RemoteException {
+        return stub.viewSubscriptions(serviceName, version);
 
     }
 
@@ -186,11 +189,19 @@ public class APIPublisherClient {
 
     public String getPublishedDate(String serviceName, String version) throws RemoteException {
         LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
-        return cycleEventDaos[0].getDate().toString();
+        Date publishedDate = cycleEventDaos[0].getDate();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+        return dateFormat.format(publishedDate).toString();
     }
 
     public String getUpdatedDate(String serviceName, String version) throws RemoteException {
         LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
-        return cycleEventDaos[cycleEventDaos.length-1].getDate().toString();
+        Date publishedDate = cycleEventDaos[cycleEventDaos.length - 1].getDate();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+        return dateFormat.format(publishedDate).toString();
+    }
+
+    public LifeCycleEventDao[] getLifeCycleEvents(String serviceName, String version) throws RemoteException {
+        return stub.listLifeCycleEvents(serviceName, version);
     }
 }

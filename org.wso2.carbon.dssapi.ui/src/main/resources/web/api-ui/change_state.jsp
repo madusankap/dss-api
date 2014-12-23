@@ -20,7 +20,6 @@
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.dssapi.ui.APIPublisherClient" %>
 <%@ page import="org.wso2.carbon.service.mgt.xsd.ServiceMetaData" %>
-<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -32,10 +31,7 @@
 
         if (serviceName == null || serviceName.trim().length() == 0) {
     %>
-
     <p><fmt:message key="service.name.cannot.be.null"/></p>
-
-
     <%
             return;
         }
@@ -48,16 +44,15 @@
         try {
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
             Boolean isPublishRequestBool = Boolean.valueOf(isPublishRequest);
-            if (!isPublishRequestBool)
-            {
-                if(client.checkNumberOfSubcriptions(serviceName)==0)
-                    client.unpublishAPI(client.getServiceData(serviceName).getServices()[0]);
-            }
-            else
-                client.publishAPI(client.getServiceData(serviceName).getServices()[0]);
+            String currentVersion = client.getCurrentApiVersion(serviceName);
+            if (!isPublishRequestBool) {
+                if (client.checkNumberOfSubcriptions(serviceName, currentVersion) == 0)
+                    client.unpublishAPI(serviceName, );
+            } else
+                client.publishAPI(client.getServiceData(serviceName).getServices()[0], currentVersion);
 
-            ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
-            boolean isAPIAvailable = client.isAPIAvailable(service);
+            //ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
+            boolean isAPIAvailable = client.isAPIAvailable(serviceName, currentVersion);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("isAvailable", isPublishRequest);

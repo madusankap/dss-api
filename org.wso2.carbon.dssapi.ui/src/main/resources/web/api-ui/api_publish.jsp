@@ -46,7 +46,7 @@
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
             ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
             client.publishAPI(service, version);
-            boolean isAPIAvailable = client.isAPIAvailable(service, version);
+            boolean isAPIAvailable = client.isAPIAvailable(serviceName, version);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("APIAvailability", isAPIAvailable);
