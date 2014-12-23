@@ -24,10 +24,7 @@ import org.apache.axis2.client.ServiceClient;
 import org.apache.axis2.context.ConfigurationContext;
 import org.wso2.carbon.dssapi.model.xsd.API;
 import org.wso2.carbon.dssapi.model.xsd.LifeCycleEventDao;
-import org.wso2.carbon.dssapi.stub.APIPublisherException;
 import org.wso2.carbon.dssapi.stub.APIPublisherStub;
-import org.wso2.carbon.service.mgt.xsd.ServiceMetaData;
-import org.wso2.carbon.service.mgt.xsd.ServiceMetaDataWrapper;
 
 import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
@@ -40,7 +37,6 @@ public class APIPublisherClient {
 
     //private static Log log = LogFactory.getLog(APIPublisherClient.class);
     APIPublisherStub stub;
-    ServiceMetaDataWrapper serviceMetaDataWrapper;
 
     public APIPublisherClient(String cookie, String url, ConfigurationContext configContext) throws AxisFault {
         String serviceEndpoint = "";
@@ -54,71 +50,24 @@ public class APIPublisherClient {
     }
 
     /**
-     * To get number of pages to display
-     *
-     * @return number of pages
-     * @throws RemoteException
-     * @throws APIPublisherException
-     */
-    public int getNumberOfPages() throws RemoteException, APIPublisherException {
-        serviceMetaDataWrapper = stub.listDssServices("", 0);
-        return serviceMetaDataWrapper.getNumberOfPages();
-    }
-
-    /**
-     * To get number of active services
-     *
-     * @return number of active services
-     * @throws RemoteException
-     * @throws APIPublisherException
-     */
-    public int getNumberOfActiveServices() throws Exception {
-        return stub.listDssServices("", 0).getNumberOfActiveServices();
-    }
-
-    /**
-     * To get number of services for API operations
-     *
-     * @return number of services for API operations
-     * @throws RemoteException
-     * @throws APIPublisherException
-     */
-    public int getNumberOfServices() throws Exception {
-        return stub.listDssServices("", 0).getServices().length;
-    }
-
-    /**
-     * To get all available services
-     *
-     * @return all the services
-     * @throws RemoteException
-     * @throws APIPublisherException
-     */
-    public ServiceMetaData[] getServices(String searchQuery) throws RemoteException, APIPublisherException {
-        return stub.listDssServices(searchQuery, 0).getServices();
-    }
-
-    /**
      * @param serviceName name of the service
      * @return api availability
      * @throws RemoteException
      */
     public boolean isAPIAvailable(String serviceName) throws RemoteException {
-        return stub.apiAvailable(serviceName, "");
+        return stub.apiAvailable(serviceName);
     }
 
 
     /**
      * To publish API for a given service
      *
-     * @param serviceMetaData service details
+     * @param serviceName name of the service
      * @return status of the operation
      * @throws RemoteException
-     * @throws APIPublisherException
      */
-    public boolean publishAPI(ServiceMetaData serviceMetaData, String version) throws RemoteException, APIPublisherException {
-        String serviceId = serviceMetaData.getName();
-        return stub.addApi(serviceId, version);
+    public boolean publishAPI(String serviceName, String version) throws RemoteException {
+        return stub.addApi(serviceName, version);
     }
 
     /**
@@ -131,31 +80,6 @@ public class APIPublisherClient {
      */
     public boolean unpublishAPI(String serviceName, String version) throws RemoteException {
         return stub.removeApi(serviceName, version);
-    }
-
-
-    /**
-     * To get number of faulty services
-     *
-     * @param serviceMetaData service details
-     * @return number of faulty service groups
-     * @throws RemoteException
-     * @throws APIPublisherException
-     */
-    public int getNumofFaultyServices(ServiceMetaData serviceMetaData) throws RemoteException, APIPublisherException {
-        return stub.listDssServices("", 0).getNumberOfFaultyServiceGroups();
-    }
-
-    /**
-     * To get the service details by service name
-     *
-     * @param serviceName name of the service
-     * @return service details
-     * @throws RemoteException
-     * @throws APIPublisherException
-     */
-    public ServiceMetaDataWrapper getServiceData(String serviceName) throws RemoteException, APIPublisherException {
-        return stub.listDssServices(serviceName, 0);
     }
 
     /**
@@ -182,6 +106,14 @@ public class APIPublisherClient {
         return apiArray[apiArray.length - 1].getApiVersion();
     }
 
+    /**
+     * To get the published date of the API
+     *
+     * @param serviceName  name of the service
+     * @param version     version of the api
+     * @return formatted published date
+     * @throws RemoteException
+     */
     public String getPublishedDate(String serviceName, String version) throws RemoteException {
         LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
         Date publishedDate = cycleEventDaos[0].getDate();
@@ -189,6 +121,14 @@ public class APIPublisherClient {
         return dateFormat.format(publishedDate).toString();
     }
 
+    /**
+     * To get the updated date of the API
+     *
+     * @param serviceName name of the service
+     * @param version     version of the api
+     * @return formatted updated date
+     * @throws RemoteException
+     */
     public String getUpdatedDate(String serviceName, String version) throws RemoteException {
         LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
         Date publishedDate = cycleEventDaos[cycleEventDaos.length - 1].getDate();
@@ -196,7 +136,27 @@ public class APIPublisherClient {
         return dateFormat.format(publishedDate).toString();
     }
 
+    /**
+     * To get the history of the API
+     *
+     * @param serviceName name of the service
+     * @param version     version of the api
+     * @return api life cycle history
+     * @throws RemoteException
+     */
     public LifeCycleEventDao[] getLifeCycleEvents(String serviceName, String version) throws RemoteException {
         return stub.listLifeCycleEvents(serviceName, version);
+    }
+
+    /**
+     * To update the API
+     *
+     * @param serviceName name of the service
+     * @param version     version of the api
+     * @return the status of the operation
+     * @throws RemoteException
+     */
+    public boolean updateApi(String serviceName, String version) throws RemoteException {
+        return stub.updateApi(serviceName, version);
     }
 }
