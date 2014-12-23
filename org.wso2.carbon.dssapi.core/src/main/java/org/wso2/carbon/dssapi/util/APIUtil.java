@@ -22,6 +22,8 @@ package org.wso2.carbon.dssapi.util;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axis2.Constants;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.model.*;
@@ -52,6 +54,7 @@ public class APIUtil {
     private static final String HTTP_PORT = "mgt.transport.http.port";
     private static final String HOST_NAME = "carbon.local.ip";
     private static final String APPLICATION_XML="_application.xml";
+    private static final Log log = LogFactory.getLog(APIUtil.class);
     /**
      * To get the API provider
      *
@@ -60,10 +63,12 @@ public class APIUtil {
      */
     private APIProvider getAPIProvider(String username) {
         try {
-
+            if (log.isDebugEnabled()){
+                log.debug("Create APIProvider from username:"+username);
+            }
             return APIManagerFactory.getInstance().getAPIProvider(username);
         } catch (APIManagementException e) {
-            e.printStackTrace();
+           log.error("Failed to Create APIProvider for"+username,e);
         }
         return null;
     }
@@ -109,15 +114,18 @@ public class APIUtil {
                         xmlStreamWriter.writeEndDocument();
                         xmlStreamWriter.flush();
                         xmlStreamWriter.close();
+                        if(log.isDebugEnabled()){
+                            log.debug("API created successfully for "+serviceId+" Service");
+                        }
                     }
                 } catch (FileNotFoundException e) {
-                    e.printStackTrace();
+                    log.error("couldn't found path :"+DSSRepositoryPath+" application xml file for " + serviceId + "Service", e);
                 } catch (XMLStreamException e) {
-                    e.printStackTrace();
+                    log.error("couldn't write application xml file for " + serviceId + "Service", e);
                 }
 
             } catch (APIManagementException e) {
-                e.printStackTrace();
+                log.error("couldn't Create API for "+serviceId+"Service",e);
             }
         }
     }
@@ -149,8 +157,11 @@ public class APIUtil {
             api.setImplementation("endpoint");
             String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint + "\",\"config\":null},\"endpoint_type\":\"http\"}";
             api.setEndpointConfig(endpointConfig);
+            if(log.isDebugEnabled()){
+                log.debug("API Object Created for API:"+identifier.getApiName()+"version:"+identifier.getVersion());
+            }
         } catch (APIManagementException e) {
-            e.printStackTrace();
+            log.error("couldn't get tiers for provider:"+identifier.getProviderName(),e);
         }
         return api;
     }
@@ -237,11 +248,12 @@ public class APIUtil {
                 if (documentElement.getLocalName().equals("managedApi") && "true".equals(documentElement.getText())) {
                     apiAvailable = true;
                 }
+
             }
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            log.error("application.xml file couldn't be found on path:"+DSSRepositoryPath,e);
         } catch (XMLStreamException e) {
-            e.printStackTrace();
+            log.error("couldn't read application xml file",e);
         }
         return apiAvailable;
     }
@@ -272,7 +284,7 @@ public class APIUtil {
         try {
             subscriptionCount = apiProvider.getAPISubscriptionCountByAPI(identifier);
         } catch (APIManagementException e) {
-            e.printStackTrace();
+           log.error("error getting subscription count for API:"+apiName+"for version:"+version,e);
         }
         return subscriptionCount;
     }
@@ -322,7 +334,7 @@ public class APIUtil {
                 }
             }
         } catch (APIManagementException e) {
-            e.printStackTrace();
+           log.error("couldn't remove API"+apiName+"version:"+version,e);
         }
         return status;
     }
@@ -346,7 +358,7 @@ public class APIUtil {
         try {
             apiList = apiProvider.searchAPIs(serviceId, "default", username);
         } catch (APIManagementException e) {
-            e.printStackTrace();
+            log.error("couldn't find api for Service:"+serviceId,e);
         }
         return apiList;
     }
@@ -371,7 +383,7 @@ public class APIUtil {
             try {
                 apiProvider.updateAPI(api);
             } catch (APIManagementException e) {
-                e.printStackTrace();
+               log.error("error while updating api:"+serviceId+"for version:"+version,e);
             }
         }
     }
@@ -414,7 +426,7 @@ public class APIUtil {
                     }
                 }
             } catch (APIManagementException e) {
-                e.printStackTrace();
+                log.error("error while getting lifecycle history api:"+serviceId+"for version:"+version,e);
             }
         }
         return lifeCycleEventDaoList.toArray(new LifeCycleEventDao[lifeCycleEventDaoList.size()]);
