@@ -19,16 +19,32 @@
 
 package org.wso2.carbon.dssapi.util;
 
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axis2.Constants;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.model.*;
+import org.wso2.carbon.apimgt.core.APIManagerConstants;
+import org.wso2.carbon.apimgt.core.APIManagerErrorConstants;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
-import org.wso2.carbon.dataservices.ui.beans.*;
+import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.dataservices.core.DBUtils;
+import org.wso2.carbon.dataservices.ui.beans.Data;
+import org.wso2.carbon.dataservices.ui.beans.Operation;
+import org.wso2.carbon.dataservices.ui.beans.Resource;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
+import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -68,9 +84,37 @@ public class APIUtil {
                  apiProvider = getAPIProvider(username + "@" + tenantName);
             }
         API api=createApiObject(serviceId,username,tenantName,data,version,apiProvider);
+
         if (api != null) {
                 try {
                   apiProvider.addAPI(api);
+                    String DSSRepositoryPath;
+                    int tenantId=CarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+                    if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
+                        DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
+                    } else {
+                        DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
+                    }
+                    try {
+                        String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
+                        File file = new File(applicationXmlPath);
+                        if (!file.exists()) {
+                            XMLStreamWriter xmlStreamWriter = DBUtils.getXMLOutputFactory().createXMLStreamWriter(new FileOutputStream(file));
+                            xmlStreamWriter.writeStartDocument();
+                            xmlStreamWriter.writeStartElement("managedApi");
+                            xmlStreamWriter.writeCharacters("true");
+                            xmlStreamWriter.writeEndElement();
+                            xmlStreamWriter.writeEndDocument();
+                            xmlStreamWriter.flush();
+                            xmlStreamWriter.close();
+                        }
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (XMLStreamException e) {
+                        e.printStackTrace();
+                    }
+
                      } catch (APIManagementException e) {
                     e.printStackTrace();
                 }
@@ -169,33 +213,38 @@ public class APIUtil {
      *
      * @param serviceId    service name of the service
      * @param username     username of the logged user
-     * @param tenantDomain tenant domain
+     * @param tennantId tenant domain
      * @return availability of the API
      */
-    public boolean apiAvailable(String serviceId, String username, String tenantDomain,String version) {
+    public boolean apiAvailable(String serviceId, String username, int tennantId,String version) {
         boolean apiAvailable = false;
-
-            APIProvider apiProvider;
-            String provider;
-          if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                provider = username;
-                apiProvider = getAPIProvider(username);
-          } else {
-                provider = username + "-AT-" + tenantDomain;
-                apiProvider = getAPIProvider(username + "@" + tenantDomain);
-           }
-            String apiVersion =version;
-            String apiName = serviceId;
-
-            APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
+        String DSSRepositoryPath;
+        if (tennantId == MultitenantConstants.SUPER_TENANT_ID) {
+            DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
+        } else {
+            DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tennantId + "/dataservices";
+        }
             try {
-                apiAvailable = apiProvider.checkIfAPIExists(identifier);
-            } catch (APIManagementException e) {
+                String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
+                File file = new File(applicationXmlPath);
+                if (file.exists()) {
+                    XMLStreamReader parser = DBUtils.getXMLInputFactory().createXMLStreamReader(
+                            new FileInputStream(file));
+                    StAXOMBuilder builder = new StAXOMBuilder(parser);
+                    OMElement documentElement = builder.getDocumentElement();
+                    if (documentElement.getLocalName().equals("managedApi") && "true".equals(documentElement.getText())) {
+                        apiAvailable = true;
+                    }
+                }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (XMLStreamException e) {
                 e.printStackTrace();
             }
-        return apiAvailable;
-    }
-    /**
+            return apiAvailable;
+        }
+
+        /**
      * To make sure that the API having active subscriptions for given service
      * @param serviceId    service name of the service
      * @param username     username of the logged user
@@ -232,9 +281,11 @@ public class APIUtil {
      * @param username     username of the logged user
      * @param tenantDomain tenant domain
      */
-    public void removeApi(String serviceId, String username, String tenantDomain,String version) {
+    public boolean removeApi(String serviceId, String username, String tenantDomain,String version) {
+        boolean status=false;
             APIProvider apiProvider;
             String provider;
+
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
                provider = username;
                 apiProvider = getAPIProvider(username);
@@ -251,9 +302,25 @@ public class APIUtil {
                 if (apiProvider.checkIfAPIExists(identifier)) {
                     apiProvider.deleteAPI(identifier);
                 }
+                String DSSRepositoryPath;
+                int tenantId=CarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+                if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
+                    DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
+                } else {
+                    DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
+                }
+                   String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + "_application.xml";
+                    File file = new File(applicationXmlPath);
+                    if (file.exists()) {
+                      if(file.delete()){
+                        status=true;
+                      }
+                    }
             } catch (APIManagementException e) {
                 e.printStackTrace();
             }
+        return status;
         }
     public List<API> getApi(String serviceId, String username, String tenantDomain){
         List<API> apiList = null;
@@ -264,7 +331,7 @@ public class APIUtil {
                 apiProvider = getAPIProvider(username + "@" + tenantDomain);
             }
         try{
-            apiList= apiProvider.searchAPIs(serviceId, "", username);
+            apiList= apiProvider.searchAPIs(serviceId, "default", username);
         } catch (APIManagementException e) {
             e.printStackTrace();
         }

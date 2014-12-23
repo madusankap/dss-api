@@ -23,13 +23,10 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.wso2.carbon.apimgt.api.model.API;
 import org.wso2.carbon.context.CarbonContext;
-import org.wso2.carbon.dataservices.common.DBConstants;
 import org.wso2.carbon.dataservices.core.admin.DataServiceAdmin;
 import org.wso2.carbon.dataservices.ui.beans.Data;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.util.APIUtil;
-import org.wso2.carbon.service.mgt.ServiceAdmin;
-import org.wso2.carbon.service.mgt.ServiceMetaDataWrapper;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -46,9 +43,9 @@ public class APIPublisher {
      * @return availability of api to DataServices
      */
     public boolean apiAvailable(String ServiceName, String version) {
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        return new APIUtil().apiAvailable(ServiceName, username, tenantDomain, version);
+        return new APIUtil().apiAvailable(ServiceName, username, tenantId, version);
     }
 
     /**
@@ -135,9 +132,8 @@ public class APIPublisher {
         try {
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
             String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-            new APIUtil().removeApi(serviceId, username, tenantDomain, version);
-            Status = true;
-        } catch (Exception e) {
+          Status=  new APIUtil().removeApi(serviceId, username, tenantDomain, version);
+             } catch (Exception e) {
             e.printStackTrace();
         }
         return Status;
