@@ -64,7 +64,7 @@
             </td>
         </tr>
         <tr class="tableEvenRow">
-            <td colspan="2"><input type="button" value="Update API" onclick=""/> <input type="button"
+            <td colspan="2"><input type="button" value="Update API" onclick="updateAPI()"/> <input type="button"
                                                                                         value="Unpublish API"
                                                                                         onclick="unpublishAPI()"/></td>
         </tr>
@@ -176,7 +176,7 @@
         function unpublishAPI() {
             alert('Unpublish API');
             try {
-                var url = '../api-ui/api_unpublish.jsp?serviceName=<%=serviceName%>&version=' + version;
+                var url = '../api-ui/api_unpublish.jsp?serviceName=<%=serviceName%>';
                 jQuery.ajax({
                     url: url,
                     async: false,
@@ -197,4 +197,32 @@
             }
         }
     </script>
+
+    <script type="text/javascript">
+        jQuery.noConflict();
+        function updateAPI() {
+            alert('Update API');
+            try {
+                var url = '../api-ui/api_update.jsp?serviceName=<%=serviceName%>';
+                jQuery.ajax({
+                    url: url,
+                    async: false,
+                    type: "GET",
+                    cache: false,
+                    success: function () {
+                        <%
+                            //String successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
+                            //CarbonUIMessage.sendCarbonUIMessage(successMessage,CarbonUIMessage.INFO,request,response,"https://10.100.5.179:9443/carbon/service-mgt/service_info.jsp?serviceName="+serviceName);
+                         %>
+                        var successMessage = "API change request sent and currently being processing. Please reload the page after a few seconds.";
+                        alert(successMessage);
+                        location.reload(true);
+                    }
+                });
+            } catch (exception) {
+                alert(exception);
+            }
+        }
+    </script>
+
 </fmt:bundle>
