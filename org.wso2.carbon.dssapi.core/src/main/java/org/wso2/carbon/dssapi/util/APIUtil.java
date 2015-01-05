@@ -356,7 +356,7 @@ public class APIUtil {
             apiProvider = getAPIProvider(username + "@" + tenantDomain);
         }
         try {
-            apiList = apiProvider.searchAPIs(serviceId, "default", username);
+            apiList = apiProvider.searchAPIs(serviceId, "default", null);
         } catch (APIManagementException e) {
             log.error("couldn't find api for Service:"+serviceId,e);
         }
