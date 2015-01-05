@@ -5,6 +5,9 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
+<%@ page import="org.wso2.carbon.apimgt.api.model.LifeCycleEvent" %>
+<%@ page import="java.text.SimpleDateFormat" %>
+<%@ page import="java.util.Date" %>
 <!--
 ~ Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
 ~
@@ -34,8 +37,8 @@
     APIPublisherClient client = null;
     try {
         client = new APIPublisherClient(cookie, backendServerURL, configContext);
-        apiVersion = client.getCurrentApiVersion(serviceName);
         APIAvailability = client.isAPIAvailable(serviceName);
+        //apiVersion = client.getCurrentApiVersion(serviceName);
     } catch (Exception e) {
         response.setStatus(500);
         CarbonUIMessage uiMsg = new CarbonUIMessage(CarbonUIMessage.ERROR, e.getMessage(), e);
@@ -66,22 +69,27 @@
                                                                                         onclick="unpublishAPI()"/></td>
         </tr>
         <tr class="tableOddRow">
-            <td colspan="2">
-                <strong><fmt:message key="publish.history"/></strong> <br/>
+            <td colspan="2" style="padding-top: 5px;padding-bottom: 5px">
+                <strong><fmt:message key="publish.history"/></strong>
                 <%
                     LifeCycleEventDao[] cycleEventDaos = client.getLifeCycleEvents(serviceName, apiVersion);
-                    for (int i = 0; i < cycleEventDaos.length; i++) { %>
-                <div style="margin-left: 5px;padding-top: 5px">
-                    <span style="background-image: url('../api-ui/images/info.png'); background-repeat: no-repeat;background-size: 18px 16px;padding-left: 18px"><%=cycleEventDaos[i].getDate()%>&nbsp;&nbsp;</span>
-                    <span style="background-image: url('../api-ui/images/user.png');background-repeat: no-repeat;background-size: 16px 16px;padding-left: 18px"><%=cycleEventDaos[i].getUserId()%>&nbsp;&nbsp;</span>
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+                    SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss a");
+                    for(LifeCycleEventDao lifeCycleEventDao : cycleEventDaos) {
+                        Date date = lifeCycleEventDao.getDate();
+                        String user = lifeCycleEventDao.getUserId();
+                %>
+                <div style="padding-top: 5px; margin-left: -3px">
+                    <span style="background-image: url('../api-ui/images/info.png'); background-repeat: no-repeat;background-size: 18px 16px;padding-left: 18px"><%=dateFormat.format(date)%>,<%=timeFormat.format(date)%></span>
+                    <span style="background-image: url('../api-ui/images/user.png');background-repeat: no-repeat;background-size: 16px 16px;padding-left: 18px"><a href="../..//publisher/user?uname=<%=user%>"><%=user%></a></span>
                     <%
-                        if (cycleEventDaos[i].getOldStatus() != "") {
+                        if (lifeCycleEventDao.getOldStatus() != "") {
                     %>
-                    <span>State changed from <strong><%=cycleEventDaos[i].getOldStatus()%></strong> to </span>
+                    <span>State changed from <strong><%=lifeCycleEventDao.getOldStatus().toLowerCase()%></strong> to </span>
                     <%
                         }
                     %>
-                    <span><strong><%=cycleEventDaos[i].getNewStatus()%></strong></span>
+                    <span><strong><%=lifeCycleEventDao.getNewStatus().toLowerCase()%></strong></span>
                 </div>
                 <%
                     }
