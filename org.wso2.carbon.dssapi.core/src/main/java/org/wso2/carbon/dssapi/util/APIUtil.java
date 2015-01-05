@@ -108,8 +108,13 @@ public class APIUtil {
                     if (!file.exists()) {
                         XMLStreamWriter xmlStreamWriter = DBUtils.getXMLOutputFactory().createXMLStreamWriter(new FileOutputStream(file));
                         xmlStreamWriter.writeStartDocument();
+                        xmlStreamWriter.writeStartElement("api");
                         xmlStreamWriter.writeStartElement("managedApi");
                         xmlStreamWriter.writeCharacters("true");
+                        xmlStreamWriter.writeEndElement();
+                        xmlStreamWriter.writeStartElement("version");
+                        xmlStreamWriter.writeCharacters(version);
+                        xmlStreamWriter.writeEndElement();
                         xmlStreamWriter.writeEndElement();
                         xmlStreamWriter.writeEndDocument();
                         xmlStreamWriter.flush();
