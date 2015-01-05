@@ -45,10 +45,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class APIUtil {
     private static final String HTTP_PORT = "mgt.transport.http.port";
@@ -250,10 +247,13 @@ public class APIUtil {
                         new FileInputStream(file));
                 StAXOMBuilder builder = new StAXOMBuilder(parser);
                 OMElement documentElement = builder.getDocumentElement();
-                if (documentElement.getLocalName().equals("managedApi") && "true".equals(documentElement.getText())) {
-                    apiAvailable = true;
+                Iterator<OMElement> elements=documentElement.getChildElements();
+                while(elements.hasNext()){
+                    OMElement element=elements.next();
+                    if (element.getLocalName().equals("managedApi") && "true".equals(documentElement.getText())) {
+                        apiAvailable = apiAvailable||true;
+                    }
                 }
-
             }
         } catch (FileNotFoundException e) {
             log.error("application.xml file couldn't be found on path:"+DSSRepositoryPath,e);
@@ -353,15 +353,45 @@ public class APIUtil {
      * @return api list according to the given parameters
      */
     public List<API> getApi(String serviceId, String username, String tenantDomain) {
+        String version = null;
+        String providerName;
         List<API> apiList = null;
+       int tenantId=CarbonContext.getThreadLocalCarbonContext().getTenantId();
         APIProvider apiProvider;
-        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+       String DSSRepositoryPath;
+        if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
+            providerName = username;
+            DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
             apiProvider = getAPIProvider(username);
         } else {
+            providerName = username + "-AT-" + tenantDomain;
+            DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
             apiProvider = getAPIProvider(username + "@" + tenantDomain);
         }
         try {
-            apiList = apiProvider.searchAPIs(serviceId, "default", null);
+            String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
+            File file = new File(applicationXmlPath);
+            if (file.exists()) {
+                XMLStreamReader parser = DBUtils.getXMLInputFactory().createXMLStreamReader(
+                        new FileInputStream(file));
+                StAXOMBuilder builder = new StAXOMBuilder(parser);
+                OMElement documentElement = builder.getDocumentElement();
+                Iterator<OMElement> elements=documentElement.getChildElements();
+                while(elements.hasNext()){
+                    OMElement element=elements.next();
+                   if("version".equals(element.getLocalName())){
+                       version=element.getText();
+                   }
+                }
+            }
+        } catch (FileNotFoundException e) {
+            log.error("application.xml file couldn't be found on path:"+DSSRepositoryPath,e);
+        } catch (XMLStreamException e) {
+            log.error("couldn't read application xml file",e);
+        }
+        try {
+        apiList=new ArrayList<API>();
+            apiList.add(apiProvider.getAPI(new APIIdentifier(providerName,serviceId,version)));
         } catch (APIManagementException e) {
             log.error("couldn't find api for Service:"+serviceId,e);
         }
