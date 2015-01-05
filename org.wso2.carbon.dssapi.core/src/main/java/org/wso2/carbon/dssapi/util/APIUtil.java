@@ -157,7 +157,7 @@ public class APIUtil {
             api.setSubscriptionAvailability(APIConstants.SUBSCRIPTION_TO_ALL_TENANTS);
             api.setResponseCache(APIConstants.DISABLED);
             api.setImplementation("endpoint");
-            String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint + "\",\"config\":null},\"endpoint_type\":\"http\"}";
+            String endpointConfig="{\"production_endpoints\":{\"url\":\""+apiEndpoint+",\"config\":null},\"wsdlendpointService\":\""+api.getId().getApiName()+"\",\"wsdlendpointPort\":\"HTTPEndpoint\",\"wsdlendpointServiceSandbox\":\"\",\"wsdlendpointPortSandbox\":\"\",\"endpoint_type\":\"wsdl\"}";
             api.setEndpointConfig(endpointConfig);
             if(log.isDebugEnabled()){
                 log.debug("API Object Created for API:"+identifier.getApiName()+"version:"+identifier.getVersion());
@@ -188,7 +188,7 @@ public class APIUtil {
                 template.setAuthType(APIConstants.AUTH_NO_AUTHENTICATION);
                 template.setHTTPVerb(resource.getMethod());
                 template.setResourceURI(endpoint);
-                template.setUriTemplate("/" + resource.getPath());
+                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\b[}]","*"));
                 uriTemplates.add(template);
             }
             for (Operation operation : operations) {
@@ -217,7 +217,7 @@ public class APIUtil {
                 }
                 template.setHTTPVerb(resource.getMethod());
                 template.setResourceURI(endpoint);
-                template.setUriTemplate("/" + resource.getPath());
+                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\b[}]","*"));
                 uriTemplates.add(template);
             }
         }
@@ -484,11 +484,11 @@ public class APIUtil {
 
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
             providerName = username;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" + serviceId;
+            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" + serviceId+"?wsdl";
             apiContext = "/api/" + serviceId;
         } else {
             providerName = username + "-AT-" + tenantName;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + serviceId;
+            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + serviceId+"?wsdl";
             apiContext = "/api/t/" + tenantName + "/" + serviceId;
         }
 
