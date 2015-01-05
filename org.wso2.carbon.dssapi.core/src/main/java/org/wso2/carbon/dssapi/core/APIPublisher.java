@@ -21,6 +21,8 @@ package org.wso2.carbon.dssapi.core;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.model.API;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.dataservices.core.admin.DataServiceAdmin;
@@ -37,6 +39,8 @@ import java.util.List;
  * To handle the API operations
  */
 public class APIPublisher {
+    private static final Log log = LogFactory.getLog(APIPublisher.class);
+
     /**
      * To check whether API is available for the given service or not
      *
@@ -45,7 +49,10 @@ public class APIPublisher {
      */
     public boolean apiAvailable(String serviceName) {
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
-        return new APIUtil().apiAvailable(serviceName,tenantId);
+    if(log.isDebugEnabled()){
+        log.debug("check api available for service name:"+serviceName);
+    }
+         return new APIUtil().apiAvailable(serviceName,tenantId);
     }
 
     /**
@@ -59,6 +66,9 @@ public class APIPublisher {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        if(log.isDebugEnabled()){
+            log.debug("check subscriptions for the API:"+serviceName+"and version:"+version);
+        }
         return new APIUtil().apiSubscriptions(serviceName, username, tenantDomain, version);
     }
 
@@ -79,6 +89,9 @@ public class APIPublisher {
                 listApi.add(tempApi);
             }
         }
+        if(log.isDebugEnabled()){
+            log.debug("list api available for service name:"+serviceName);
+        }
         return listApi.toArray(new org.wso2.carbon.dssapi.model.API[listApi.size()]);
     }
 
@@ -92,6 +105,9 @@ public class APIPublisher {
     public LifeCycleEventDao[] listLifeCycleEvents(String serviceName, String version) {
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        if(log.isDebugEnabled()){
+            log.debug("list life cycle history for API name:"+serviceName+"& version:"+version);
+        }
         return new APIUtil().getLifeCycleEventList(serviceName, username, tenantDomain, version);
     }
 
@@ -115,8 +131,11 @@ public class APIPublisher {
             String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
             new APIUtil().addApi(serviceId, username, tenantDomain, data, version);
             Status = true;
+            if(log.isDebugEnabled()){
+                log.debug("api created for Service Name:"+serviceId+"and for version:"+version);
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+          log.error("couldn't create api for Service:"+serviceId+"to version:"+version,e);
         }
         return Status;
     }
@@ -134,8 +153,11 @@ public class APIPublisher {
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
             String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
             Status = new APIUtil().removeApi(serviceId, username, tenantDomain, version);
+            if(log.isDebugEnabled()){
+                log.debug("api for Service:"+serviceId+"on version:"+version+" successfully removed");
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("couldn't remove api for Service:" + serviceId + "to version:" + version, e);
         }
         return Status;
     }
@@ -162,8 +184,11 @@ public class APIPublisher {
             String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
             new APIUtil().updateApi(serviceId, username, tenantDomain, data, version);
             Status = true;
+            if(log.isDebugEnabled()){
+                log.debug("api for Service:"+serviceId+"on version:"+version+" successfully updated");
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("couldn't update api for Service:"+serviceId+"to version:"+version,e);
         }
         return Status;
     }
