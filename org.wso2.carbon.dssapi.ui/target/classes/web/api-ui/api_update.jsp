@@ -22,7 +22,6 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
-<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 
 <fmt:bundle basename="org.wso2.carbon.dssapi.ui.i18n.Resources">
     <%
@@ -46,21 +45,10 @@
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
             //ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
             String currentVersion = client.getCurrentApiVersion(serviceName);
-            if(client.checkNumberOfSubcriptions(serviceName, currentVersion)==0) {
-                String successMsg = serviceName + " - " + currentVersion + " unpublished successfully.";
-                Boolean isUnpublished = client.unpublishAPI(serviceName, currentVersion);
-                if(isUnpublished)
-                    CarbonUIMessage.sendCarbonUIMessage(successMsg, CarbonUIMessage.INFO, request);
-                else
-                    CarbonUIMessage.sendCarbonUIMessage("Error occured.!!", CarbonUIMessage.ERROR, request);
-            }
-
-            else {
-                String warningMsg = "Cannot unpublish the API. Subscribers exists.";
-                CarbonUIMessage.sendCarbonUIMessage(warningMsg,CarbonUIMessage.WARNING, request);
-            }
-
+            if(client.checkNumberOfSubcriptions(serviceName, currentVersion)==0)
+                client.updateApi(serviceName, currentVersion);
             boolean isAPIAvailable = client.isAPIAvailable(serviceName);
+
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("APIAvailability", isAPIAvailable);
         } catch (Exception e) {
