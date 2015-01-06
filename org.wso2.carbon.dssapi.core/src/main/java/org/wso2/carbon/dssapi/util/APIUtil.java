@@ -250,7 +250,7 @@ public class APIUtil {
                 Iterator<OMElement> elements=documentElement.getChildElements();
                 while(elements.hasNext()){
                     OMElement element=elements.next();
-                    if (element.getLocalName().equals("managedApi") && "true".equals(documentElement.getText())) {
+                    if ("managedApi".equals(element.getLocalName()) && "true".equals(element.getText())) {
                         apiAvailable = apiAvailable||true;
                     }
                 }

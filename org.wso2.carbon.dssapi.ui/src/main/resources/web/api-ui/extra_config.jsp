@@ -28,7 +28,7 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%
     String serviceName = request.getParameter("serviceName");
-    String apiVersion="1.0.0";
+    String apiVersion;
     boolean APIAvailability = false;
     String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
     ConfigurationContext configContext =
@@ -38,7 +38,6 @@
     try {
         client = new APIPublisherClient(cookie, backendServerURL, configContext);
         APIAvailability = client.isAPIAvailable(serviceName);
-        apiVersion = client.getCurrentApiVersion(serviceName);
     } catch (Exception e) {
         response.setStatus(500);
         CarbonUIMessage uiMsg = new CarbonUIMessage(CarbonUIMessage.ERROR, e.getMessage(), e);
@@ -54,6 +53,7 @@
         </thead>
         <%
             if (APIAvailability) {
+                apiVersion = client.getCurrentApiVersion(serviceName);
         %>
         <tr class="tableOddRow">
             <td><fmt:message key="published.date"/> :
