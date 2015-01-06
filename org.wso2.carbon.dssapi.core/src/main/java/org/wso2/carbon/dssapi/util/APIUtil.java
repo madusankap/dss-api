@@ -157,7 +157,7 @@ public class APIUtil {
             api.setSubscriptionAvailability(APIConstants.SUBSCRIPTION_TO_ALL_TENANTS);
             api.setResponseCache(APIConstants.DISABLED);
             api.setImplementation("endpoint");
-            String endpointConfig="{\"production_endpoints\":{\"url\":\""+apiEndpoint+",\"config\":null},\"wsdlendpointService\":\""+api.getId().getApiName()+"\",\"wsdlendpointPort\":\"HTTPEndpoint\",\"wsdlendpointServiceSandbox\":\"\",\"wsdlendpointPortSandbox\":\"\",\"endpoint_type\":\"wsdl\"}";
+            String endpointConfig="{\"production_endpoints\":{\"url\":\""+apiEndpoint+"\",\"config\":null},\"wsdlendpointService\":\""+api.getId().getApiName()+"\",\"wsdlendpointPort\":\"HTTPEndpoint\",\"wsdlendpointServiceSandbox\":\"\",\"wsdlendpointPortSandbox\":\"\",\"endpoint_type\":\"wsdl\"}";
             api.setEndpointConfig(endpointConfig);
             if(log.isDebugEnabled()){
                 log.debug("API Object Created for API:"+identifier.getApiName()+"version:"+identifier.getVersion());
