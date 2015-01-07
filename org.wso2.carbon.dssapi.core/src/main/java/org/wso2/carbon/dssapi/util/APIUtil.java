@@ -33,6 +33,7 @@ import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.dataservices.core.DBUtils;
 import org.wso2.carbon.dataservices.ui.beans.Data;
 import org.wso2.carbon.dataservices.ui.beans.Operation;
+import org.wso2.carbon.dataservices.ui.beans.Query;
 import org.wso2.carbon.dataservices.ui.beans.Resource;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -46,6 +47,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class APIUtil {
     private static final String HTTP_PORT = "mgt.transport.http.port";
@@ -188,13 +190,13 @@ public class APIUtil {
                 template.setAuthType(APIConstants.AUTH_NO_AUTHENTICATION);
                 template.setHTTPVerb(resource.getMethod());
                 template.setResourceURI(endpoint);
-                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\b[}]","*"));
+                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\\w+[}]","*"));
                 uriTemplates.add(template);
             }
             for (Operation operation : operations) {
                 URITemplate template = new URITemplate();
                 template.setAuthType(APIConstants.AUTH_NO_AUTHENTICATION);
-                template.setHTTPVerb("POST");
+                template.setHTTPVerb(getOperationBasedHttpVerbs(operation.getCallQuery().getHref(),data));
                 template.setResourceURI(endpoint);
                 template.setUriTemplate("/" + operation.getName());
                 uriTemplates.add(template);
@@ -203,7 +205,7 @@ public class APIUtil {
             for (Operation operation : operations) {
                 URITemplate template = new URITemplate();
                 template.setAuthType(APIConstants.AUTH_APPLICATION_OR_USER_LEVEL_TOKEN);
-                template.setHTTPVerb("POST");
+                template.setHTTPVerb(getOperationBasedHttpVerbs(operation.getCallQuery().getHref(),data));
                 template.setResourceURI(endpoint);
                 template.setUriTemplate("/" + operation.getName());
                 uriTemplates.add(template);
@@ -217,11 +219,36 @@ public class APIUtil {
                 }
                 template.setHTTPVerb(resource.getMethod());
                 template.setResourceURI(endpoint);
-                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\b[}]","*"));
+                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\\w+[}]","*"));
                 uriTemplates.add(template);
             }
         }
-        return uriTemplates;
+              return uriTemplates;
+    }
+
+    /**
+     *
+     * @param queryId QueryId of the Operation
+     * @param  data data service object
+     * @return type of http verb can used to operation
+     */
+
+    private String getOperationBasedHttpVerbs(String queryId,Data data) {
+        String httpVerb="POST";
+        if(queryId!=null){
+            Query query=data.getQuery(queryId);
+            if(query!=null){
+                if(Pattern.compile(Pattern.quote("SELECT"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
+                    httpVerb="GET";
+                if(Pattern.compile(Pattern.quote("INSERT"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
+                    httpVerb="PUT";
+                if(Pattern.compile(Pattern.quote("DELETE"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
+                    httpVerb="DELETE";
+                if(Pattern.compile(Pattern.quote("UPDATE"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
+                    httpVerb="POST";
+            }
+        }
+        return httpVerb;
     }
 
     /**
