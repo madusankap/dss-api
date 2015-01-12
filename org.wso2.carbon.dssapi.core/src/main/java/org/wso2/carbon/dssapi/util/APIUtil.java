@@ -24,6 +24,10 @@ import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axis2.Constants;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.model.*;
@@ -31,14 +35,10 @@ import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.dataservices.core.DBUtils;
-import org.wso2.carbon.dataservices.ui.beans.Data;
-import org.wso2.carbon.dataservices.ui.beans.Operation;
-import org.wso2.carbon.dataservices.ui.beans.Query;
-import org.wso2.carbon.dataservices.ui.beans.Resource;
+import org.wso2.carbon.dataservices.ui.beans.*;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
-
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
@@ -52,8 +52,11 @@ import java.util.regex.Pattern;
 public class APIUtil {
     private static final String HTTP_PORT = "mgt.transport.http.port";
     private static final String HOST_NAME = "carbon.local.ip";
-    private static final String APPLICATION_XML="_application.xml";
+    private static final String APPLICATION_XML = "_application.xml";
+    private JSONObject swagger12Json = new JSONObject();
+    private Map<String,JSONArray> resourceMap=new LinkedHashMap<String, JSONArray>();
     private static final Log log = LogFactory.getLog(APIUtil.class);
+
     /**
      * To get the API provider
      *
@@ -62,12 +65,12 @@ public class APIUtil {
      */
     private APIProvider getAPIProvider(String username) {
         try {
-            if (log.isDebugEnabled()){
-                log.debug("Create APIProvider from username:"+username);
+            if (log.isDebugEnabled()) {
+                log.debug("Create APIProvider from username:" + username);
             }
             return APIManagerFactory.getInstance().getAPIProvider(username);
         } catch (APIManagementException e) {
-           log.error("Failed to Create APIProvider for"+username,e);
+            log.error("Failed to Create APIProvider for" + username, e);
         }
         return null;
     }
@@ -93,6 +96,22 @@ public class APIUtil {
         if (api != null) {
             try {
                 apiProvider.addAPI(api);
+
+                try {
+                    createAPI_DOC_Info(api.getId());
+                    createApis(api);
+                    createAPIResources(api);
+                    String apiJSON=((JSONObject)swagger12Json.get("api_doc")).toJSONString();
+                    apiProvider.updateSwagger12Definition(api.getId(), APIConstants.API_DOC_1_2_RESOURCE_NAME, apiJSON);
+                    JSONArray resources=(JSONArray)swagger12Json.get("resources");
+                    for(Object resource:resources){
+                        JSONObject tempResource=(JSONObject)resource;
+                        String resourcePath = (String) tempResource.get("resourcePath");
+                        apiProvider.updateSwagger12Definition(api.getId(), resourcePath, tempResource.toJSONString());
+                    }
+                } catch (ParseException e) {
+                    log.error("couldn't Create Swagger12Json for Api " + api.getId().getApiName(), e);
+                }
                 String DSSRepositoryPath;
                 int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
 
@@ -102,7 +121,7 @@ public class APIUtil {
                     DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
                 }
                 try {
-                    String applicationXmlPath = DSSRepositoryPath + "/" + serviceId +APPLICATION_XML;
+                    String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
                     File file = new File(applicationXmlPath);
                     if (!file.exists()) {
                         XMLStreamWriter xmlStreamWriter = DBUtils.getXMLOutputFactory().createXMLStreamWriter(new FileOutputStream(file));
@@ -118,21 +137,21 @@ public class APIUtil {
                         xmlStreamWriter.writeEndDocument();
                         xmlStreamWriter.flush();
                         xmlStreamWriter.close();
-                        if(log.isDebugEnabled()){
-                            log.debug("API created successfully for "+serviceId+" Service");
+                        if (log.isDebugEnabled()) {
+                            log.debug("API created successfully for " + serviceId + " Service");
                         }
                     }
                 } catch (FileNotFoundException e) {
-                    log.error("couldn't found path :"+DSSRepositoryPath+" application xml file for " + serviceId + "Service", e);
+                    log.error("couldn't found path :" + DSSRepositoryPath + " application xml file for " + serviceId + "Service", e);
                 } catch (XMLStreamException e) {
                     log.error("couldn't write application xml file for " + serviceId + "Service", e);
                 }
 
             } catch (APIManagementException e) {
-                log.error("couldn't Create API for "+serviceId+"Service",e);
+                log.error("couldn't Create API for " + serviceId + "Service", e);
             }
         }
-    }
+            }
 
     /**
      * To create the model of the API
@@ -150,7 +169,7 @@ public class APIUtil {
         try {
             api = new API(identifier);
             api.setContext(apiContext);
-            api.setUriTemplates(getURITemplates(apiEndpoint, authType, data));
+            api.setUriTemplates(getURITemplates(apiEndpoint, authType, data,apiProvider.getTiers()));
             api.setVisibility(APIConstants.API_GLOBAL_VISIBILITY);
             api.addAvailableTiers(apiProvider.getTiers());
             api.setEndpointSecured(false);
@@ -159,13 +178,13 @@ public class APIUtil {
             api.setSubscriptionAvailability(APIConstants.SUBSCRIPTION_TO_ALL_TENANTS);
             api.setResponseCache(APIConstants.DISABLED);
             api.setImplementation("endpoint");
-            String endpointConfig="{\"production_endpoints\":{\"url\":\""+apiEndpoint+"\",\"config\":null},\"wsdlendpointService\":\""+api.getId().getApiName()+"\",\"wsdlendpointPort\":\"HTTPEndpoint\",\"wsdlendpointServiceSandbox\":\"\",\"wsdlendpointPortSandbox\":\"\",\"endpoint_type\":\"wsdl\"}";
+            String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint + "\",\"config\":null},\"wsdlendpointService\":\"" + api.getId().getApiName() + "\",\"wsdlendpointPort\":\"HTTPEndpoint\",\"wsdlendpointServiceSandbox\":\"\",\"wsdlendpointPortSandbox\":\"\",\"endpoint_type\":\"wsdl\"}";
             api.setEndpointConfig(endpointConfig);
-            if(log.isDebugEnabled()){
-                log.debug("API Object Created for API:"+identifier.getApiName()+"version:"+identifier.getVersion());
+            if (log.isDebugEnabled()) {
+                log.debug("API Object Created for API:" + identifier.getApiName() + "version:" + identifier.getVersion());
             }
         } catch (APIManagementException e) {
-            log.error("couldn't get tiers for provider:"+identifier.getProviderName(),e);
+            log.error("couldn't get tiers for provider:" + identifier.getProviderName(), e);
         }
         return api;
     }
@@ -176,40 +195,52 @@ public class APIUtil {
      * @param endpoint Endpoint URL
      * @param authType Authentication type
      * @param data     data service object
+     * @param tiers
      * @return URI templates
      */
-    private Set<URITemplate> getURITemplates(String endpoint, String authType, Data data) {
+    private Set<URITemplate> getURITemplates(String endpoint, String authType, Data data, Set<Tier> tiers) {
         //todo improve to add sub context paths for uri templates as well
         Set<URITemplate> uriTemplates = new LinkedHashSet<URITemplate>();
         ArrayList<Operation> operations = data.getOperations();
         ArrayList<Resource> resourceList = data.getResources();
-
         if (authType.equals(APIConstants.AUTH_NO_AUTHENTICATION)) {
             for (Resource resource : resourceList) {
                 URITemplate template = new URITemplate();
                 template.setAuthType(APIConstants.AUTH_NO_AUTHENTICATION);
                 template.setHTTPVerb(resource.getMethod());
                 template.setResourceURI(endpoint);
-                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\\w+[}]","*"));
+                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\\w+[}]", "*"));
+                for(Tier tier:tiers.toArray(new Tier[tiers.size()])){
+                    template.setThrottlingTier(tier.getName());
+                }
                 uriTemplates.add(template);
+                addApiArray(template, resource.getCallQuery().getWithParams());
             }
             for (Operation operation : operations) {
                 URITemplate template = new URITemplate();
                 template.setAuthType(APIConstants.AUTH_NO_AUTHENTICATION);
-                template.setHTTPVerb(getOperationBasedHttpVerbs(operation.getCallQuery().getHref(),data));
+                template.setHTTPVerb(getOperationBasedHttpVerbs(operation.getCallQuery().getHref(), data));
                 template.setResourceURI(endpoint);
                 template.setUriTemplate("/" + operation.getName());
+                for(Tier tier:tiers.toArray(new Tier[tiers.size()])){
+                    template.setThrottlingTier(tier.getName());
+                }
                 uriTemplates.add(template);
+                addApiArray(template, operation.getCallQuery().getWithParams());
             }
         } else {
             for (Operation operation : operations) {
                 URITemplate template = new URITemplate();
                 template.setAuthType(APIConstants.AUTH_APPLICATION_OR_USER_LEVEL_TOKEN);
-                template.setHTTPVerb(getOperationBasedHttpVerbs(operation.getCallQuery().getHref(),data));
+                template.setHTTPVerb(getOperationBasedHttpVerbs(operation.getCallQuery().getHref(), data));
                 template.setResourceURI(endpoint);
                 template.setUriTemplate("/" + operation.getName());
+                for(Tier tier:tiers.toArray(new Tier[tiers.size()])){
+                    template.setThrottlingTier(tier.getName());
+                }
                 uriTemplates.add(template);
-            }
+                addApiArray(template,operation.getCallQuery().getWithParams());
+                         }
             for (Resource resource : resourceList) {
                 URITemplate template = new URITemplate();
                 if (!"OPTIONS".equals(resource.getMethod())) {
@@ -219,33 +250,35 @@ public class APIUtil {
                 }
                 template.setHTTPVerb(resource.getMethod());
                 template.setResourceURI(endpoint);
-                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\\w+[}]","*"));
+                template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\\w+[}]", "*"));
+                for(Tier tier:tiers.toArray(new Tier[tiers.size()])){
+                    template.setThrottlingTier(tier.getName());
+                }
                 uriTemplates.add(template);
-            }
+                addApiArray(template,resource.getCallQuery().getWithParams());
+                           }
         }
-              return uriTemplates;
+        return uriTemplates;
     }
-
-    /**
-     *
+       /**
      * @param queryId QueryId of the Operation
-     * @param  data data service object
+     * @param data    data service object
      * @return type of http verb can used to operation
      */
 
-    private String getOperationBasedHttpVerbs(String queryId,Data data) {
-        String httpVerb="POST";
-        if(queryId!=null){
-            Query query=data.getQuery(queryId);
-            if(query!=null){
-                if(Pattern.compile(Pattern.quote("SELECT"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
-                    httpVerb="GET";
-                if(Pattern.compile(Pattern.quote("INSERT"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
-                    httpVerb="PUT";
-                if(Pattern.compile(Pattern.quote("DELETE"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
-                    httpVerb="DELETE";
-                if(Pattern.compile(Pattern.quote("UPDATE"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
-                    httpVerb="POST";
+    private String getOperationBasedHttpVerbs(String queryId, Data data) {
+        String httpVerb = "POST";
+        if (queryId != null) {
+            Query query = data.getQuery(queryId);
+            if (query != null) {
+                if (Pattern.compile(Pattern.quote("SELECT"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
+                    httpVerb = "GET";
+                if (Pattern.compile(Pattern.quote("INSERT"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
+                    httpVerb = "PUT";
+                if (Pattern.compile(Pattern.quote("DELETE"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
+                    httpVerb = "DELETE";
+                if (Pattern.compile(Pattern.quote("UPDATE"), Pattern.CASE_INSENSITIVE).matcher(query.getSql()).find())
+                    httpVerb = "POST";
             }
         }
         return httpVerb;
@@ -258,7 +291,7 @@ public class APIUtil {
      * @param tenantId  tenant domain
      * @return availability of the API
      */
-    public boolean apiAvailable(String serviceId,int tenantId) {
+    public boolean apiAvailable(String serviceId, int tenantId) {
         boolean apiAvailable = false;
         String DSSRepositoryPath;
         if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
@@ -274,18 +307,18 @@ public class APIUtil {
                         new FileInputStream(file));
                 StAXOMBuilder builder = new StAXOMBuilder(parser);
                 OMElement documentElement = builder.getDocumentElement();
-                Iterator<OMElement> elements=documentElement.getChildElements();
-                while(elements.hasNext()){
-                    OMElement element=elements.next();
+                Iterator<OMElement> elements = documentElement.getChildElements();
+                while (elements.hasNext()) {
+                    OMElement element = elements.next();
                     if ("managedApi".equals(element.getLocalName()) && "true".equals(element.getText())) {
-                        apiAvailable = apiAvailable||true;
+                        apiAvailable = apiAvailable || true;
                     }
                 }
             }
         } catch (FileNotFoundException e) {
-            log.error("application.xml file couldn't be found on path:"+DSSRepositoryPath,e);
+            log.error("application.xml file couldn't be found on path:" + DSSRepositoryPath, e);
         } catch (XMLStreamException e) {
-            log.error("couldn't read application xml file",e);
+            log.error("couldn't read application xml file", e);
         }
         return apiAvailable;
     }
@@ -316,7 +349,7 @@ public class APIUtil {
         try {
             subscriptionCount = apiProvider.getAPISubscriptionCountByAPI(identifier);
         } catch (APIManagementException e) {
-           log.error("error getting subscription count for API:"+apiName+"for version:"+version,e);
+            log.error("error getting subscription count for API:" + apiName + "for version:" + version, e);
         }
         return subscriptionCount;
     }
@@ -366,7 +399,7 @@ public class APIUtil {
                 }
             }
         } catch (APIManagementException e) {
-           log.error("couldn't remove API"+apiName+"version:"+version,e);
+            log.error("couldn't remove API" + apiName + "version:" + version, e);
         }
         return status;
     }
@@ -383,9 +416,9 @@ public class APIUtil {
         String version = null;
         String providerName;
         List<API> apiList = null;
-       int tenantId=CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         APIProvider apiProvider;
-       String DSSRepositoryPath;
+        String DSSRepositoryPath;
         if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
             providerName = username;
             DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
@@ -403,24 +436,24 @@ public class APIUtil {
                         new FileInputStream(file));
                 StAXOMBuilder builder = new StAXOMBuilder(parser);
                 OMElement documentElement = builder.getDocumentElement();
-                Iterator<OMElement> elements=documentElement.getChildElements();
-                while(elements.hasNext()){
-                    OMElement element=elements.next();
-                   if("version".equals(element.getLocalName())){
-                       version=element.getText();
-                   }
+                Iterator<OMElement> elements = documentElement.getChildElements();
+                while (elements.hasNext()) {
+                    OMElement element = elements.next();
+                    if ("version".equals(element.getLocalName())) {
+                        version = element.getText();
+                    }
                 }
             }
         } catch (FileNotFoundException e) {
-            log.error("application.xml file couldn't be found on path:"+DSSRepositoryPath,e);
+            log.error("application.xml file couldn't be found on path:" + DSSRepositoryPath, e);
         } catch (XMLStreamException e) {
-            log.error("couldn't read application xml file",e);
+            log.error("couldn't read application xml file", e);
         }
         try {
-        apiList=new ArrayList<API>();
-            apiList.add(apiProvider.getAPI(new APIIdentifier(providerName,serviceId,version)));
+            apiList = new ArrayList<API>();
+            apiList.add(apiProvider.getAPI(new APIIdentifier(providerName, serviceId, version)));
         } catch (APIManagementException e) {
-            log.error("couldn't find api for Service:"+serviceId,e);
+            log.error("couldn't find api for Service:" + serviceId, e);
         }
         return apiList;
     }
@@ -445,7 +478,7 @@ public class APIUtil {
             try {
                 apiProvider.updateAPI(api);
             } catch (APIManagementException e) {
-               log.error("error while updating api:"+serviceId+"for version:"+version,e);
+                log.error("error while updating api:" + serviceId + "for version:" + version, e);
             }
         }
     }
@@ -488,7 +521,7 @@ public class APIUtil {
                     }
                 }
             } catch (APIManagementException e) {
-                log.error("error while getting lifecycle history api:"+serviceId+"for version:"+version,e);
+                log.error("error while getting lifecycle history api:" + serviceId + "for version:" + version, e);
             }
         }
         return lifeCycleEventDaoList.toArray(new LifeCycleEventDao[lifeCycleEventDaoList.size()]);
@@ -496,11 +529,12 @@ public class APIUtil {
 
     /**
      * To create API model
-     * @param serviceId service name of the service
-     * @param username username of the logged user
-     * @param tenantName tenant of the logged user
-     * @param data data service object
-     * @param version version of the api
+     *
+     * @param serviceId   service name of the service
+     * @param username    username of the logged user
+     * @param tenantName  tenant of the logged user
+     * @param data        data service object
+     * @param version     version of the api
      * @param apiProvider API Provider
      * @return created api model
      */
@@ -511,11 +545,11 @@ public class APIUtil {
 
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
             providerName = username;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" + serviceId+"?wsdl";
+            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" + serviceId + "?wsdl";
             apiContext = "/api/" + serviceId;
         } else {
             providerName = username + "-AT-" + tenantName;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + serviceId+"?wsdl";
+            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + serviceId + "?wsdl";
             apiContext = "/api/t/" + tenantName + "/" + serviceId;
         }
 
@@ -526,6 +560,173 @@ public class APIUtil {
         String authType = "Any";
         APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
         return createAPIModel(apiProvider, apiContext, apiEndpoint, authType, identifier, data);
+    }
+
+    /**
+     * To Create api_doc and info json objects in Swagger12 Json
+     * @param apiIdentifier API identifier
+     * @throws ParseException
+     */
+    private void createAPI_DOC_Info(APIIdentifier apiIdentifier) throws ParseException {
+        JSONObject api_doc = new JSONObject();
+        api_doc.put("apiVersion", apiIdentifier.getVersion());
+        api_doc.put("swaggerVersion", "1.2");
+        api_doc.put("authorizations",new JSONParser().parse("{\"oauth2\":{\n" +
+                "            \"scopes\":[\n" +
+                "\n" +
+                "            ],\n" +
+                "            \"type\":\"oauth2\"\n" +
+                "         }}"));
+        api_doc.put("info", new JSONParser().parse("{\n" +
+                "         \"title\":\"" + apiIdentifier.getApiName() + "\",\n" +
+                "         \"termsOfServiceUrl\":\"\",\n" +
+                "         \"description\":\"\",\n" +
+                "         \"license\":\"\",\n" +
+                "         \"contact\":\"\",\n" +
+                "         \"licenseUrl\":\"\"\n" +
+                "      }"));
+        swagger12Json.put("api_doc", api_doc);
+    }
+
+    /**
+     * To Create apis Json Object in swagger12 Json
+     * @param api api Object
+     * @throws ParseException
+     */
+    private void createApis(API api) throws ParseException {
+        Set<String> resourceMap = new LinkedHashSet<String>();
+        JSONArray jsonArray = new JSONArray();
+        Iterator<URITemplate> uriTemplateIterator = api.getUriTemplates().iterator();
+        while (uriTemplateIterator.hasNext()) {
+            String uriTemplateString = uriTemplateIterator.next().getUriTemplate();
+            if (uriTemplateString.contains("/*")) {
+                uriTemplateString = uriTemplateString.replace("/*", "");
+            }
+            resourceMap.add(uriTemplateString);
+        }
+        Iterator<String> resources = resourceMap.iterator();
+        while (resources.hasNext()) {
+            jsonArray.add(new JSONParser().parse("{\n" +
+                    "            \"description\":\"\",\n" +
+                    "            \"path\":\"" + resources.next() + "\"\n" +
+                    "         }"));
+        }
+        JSONObject api_doc=(JSONObject)swagger12Json.get("api_doc");
+        api_doc.put("apis", jsonArray);
+        swagger12Json.remove("api_doc");
+        swagger12Json.put("api_doc",api_doc);
+    }
+
+    /**
+     * To Create API Resources in swagger12 definition
+     * @param api api Object
+     *
+     */
+    private void createAPIResources(API api){
+        JSONArray resourcesArray=new JSONArray();
+        Iterator<String> resources=resourceMap.keySet().iterator();
+        while(resources.hasNext()){
+            String resource=resources.next();
+            JSONObject resourcesObject=new JSONObject();
+            resourcesObject.put("apiVersion",api.getId().getVersion());
+            resourcesObject.put("basePath","http://"+System.getProperty(HOST_NAME)+":"+ System.getProperty(HTTP_PORT)+api.getContext()+api.getId().getVersion());
+            resourcesObject.put("swaggerVersion","1.2");
+            resourcesObject.put("resourcePath",resource);
+            resourcesObject.put("apis",resourceMap.get(resource));
+            resourcesArray.add(resourcesObject);
+        }
+        swagger12Json.put("resources",resourcesArray);
+    }
+
+    /**
+     *To Add api according to the Uri Template to Swagger12  Json
+     *
+     * @param template URITemplate according to path
+     * @param withParams parameters in Sql Query
+     */
+    private void addApiArray(URITemplate template, List<WithParam> withParams) {
+        String key=template.getUriTemplate().replace("/*","");
+        if(resourceMap.containsKey(key)){
+            JSONArray APIArray=resourceMap.get(key);
+            if(APIArray!=null){
+                JSONObject newApiObject= new JSONObject();
+                newApiObject.put("path",template.getUriTemplate());
+                JSONArray operationsArray =new JSONArray();
+                JSONObject operationObject = new JSONObject();
+                createOperationObject(withParams, template, operationObject);
+                operationsArray.add(operationObject);
+                newApiObject.put("operations", operationsArray);
+                APIArray.add(newApiObject);
+                resourceMap.remove(key);
+                resourceMap.put(key,APIArray);
+            }else{
+                JSONArray newApiArray=new JSONArray();
+                JSONObject newApiObject= new JSONObject();
+                newApiObject.put("path",template.getUriTemplate());
+                JSONArray operationsArray =new JSONArray();
+                JSONObject operationObject = new JSONObject();
+                createOperationObject(withParams, template, operationObject);
+                operationsArray.add(operationObject);
+                newApiObject.put("operations", operationsArray);
+                newApiArray.add(newApiObject);
+                resourceMap.put(key,newApiArray);
+            }
+
+        }else{
+            JSONArray APIArray =new JSONArray();
+            JSONObject newApiObject= new JSONObject();
+            newApiObject.put("path",template.getUriTemplate());
+            JSONArray operationsArray =new JSONArray();
+            JSONObject operationObject = new JSONObject();
+            createOperationObject(withParams, template, operationObject);
+            operationsArray.add(operationObject);
+            newApiObject.put("operations", operationsArray);
+            APIArray.add(newApiObject);
+            resourceMap.put(key,APIArray);
+        }
+    }
+
+    /**
+     *To create Operations objects in Swagger12
+     *
+     * @param withParams parameters in Sql Query
+     * @param template URITemplate according to path
+     * @param operationObject JSONObject of the Operation in Swagger12
+     */
+    private void createOperationObject(List<WithParam> withParams, URITemplate template, JSONObject operationObject) {
+        operationObject.put("nickname", template.getHTTPVerb().toLowerCase() + "_" + template.getUriTemplate().replaceFirst("/", ""));
+        operationObject.put("method", template.getHTTPVerb().toUpperCase());
+        JSONArray parametersArray = new JSONArray();
+
+        for (WithParam param : withParams) {
+            try {
+                if ("GET".equals(template.getHTTPVerb().toUpperCase())) {
+
+                    parametersArray.add(new JSONParser().parse("{\n" +
+                            "                           \"description\":\"Request Body\",\n" +
+                            "                           \"name\":\"" + param.getName() + "\",\n" +
+                            "                           \"allowMultiple\":false,\n" +
+                            "                           \"required\":true,\n" +
+                            "                           \"type\":\"string\",\n" +
+                            "                           \"paramType\":\"query\"\n" +
+                            "                        }"));
+                } else {
+                    parametersArray.add(new JSONParser().parse("{\n" +
+                            "                           \"description\":\"Request Body\",\n" +
+                            "                           \"name\":\"" + param.getName() + "\",\n" +
+                            "                           \"allowMultiple\":false,\n" +
+                            "                           \"required\":true,\n" +
+                            "                           \"type\":\"string\",\n" +
+                            "                           \"paramType\":\"form\"\n" +
+                            "                        }"));
+                }
+            } catch (ParseException e) {
+                log.error("Couldn't parse swagger parameter Json", e);
+            }
+        }
+        operationObject.put("parameters", parametersArray);
+        operationObject.put("auth_type", template.getAuthType());
+        operationObject.put("throttling_tier",template.getThrottlingTiers());
     }
 }
 
