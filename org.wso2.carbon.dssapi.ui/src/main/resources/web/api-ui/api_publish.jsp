@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2005-2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+~ Copyright (c) 2005-2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
 ~
 ~ WSO2 Inc. licenses this file to you under the Apache License,
 ~ Version 2.0 (the "License"); you may not use this file except
@@ -19,10 +19,10 @@
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.dssapi.ui.APIPublisherClient" %>
+<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
-<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 
 <fmt:bundle basename="org.wso2.carbon.dssapi.ui.i18n.Resources">
     <%
@@ -46,10 +46,10 @@
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
             boolean isPublished = client.publishAPI(serviceName, version);
             String successMsg = serviceName + " - " + version + " published successfully.";
-            if(isPublished)
+            if (isPublished)
                 CarbonUIMessage.sendCarbonUIMessage(successMsg, CarbonUIMessage.INFO, request);
             else
-                CarbonUIMessage.sendCarbonUIMessage("Error occured.!!", CarbonUIMessage.ERROR, request);
+                CarbonUIMessage.sendCarbonUIMessage("Error occurred.!!", CarbonUIMessage.ERROR, request);
 
             boolean isAPIAvailable = client.isAPIAvailable(serviceName);
 

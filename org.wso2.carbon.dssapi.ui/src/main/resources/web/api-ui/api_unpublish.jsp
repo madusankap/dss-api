@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2005-2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+~ Copyright (c) 2005-2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
 ~
 ~ WSO2 Inc. licenses this file to you under the Apache License,
 ~ Version 2.0 (the "License"); you may not use this file except
@@ -19,17 +19,14 @@
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.dssapi.ui.APIPublisherClient" %>
+<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
-<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 
 <fmt:bundle basename="org.wso2.carbon.dssapi.ui.i18n.Resources">
     <%
         String serviceName = CharacterEncoder.getSafeText(request.getParameter("serviceName"));
-        //String currentVersion = CharacterEncoder.getSafeText(request.getParameter("version"));
-        //String version = "1.0.0";
-        //String isPublishRequest = CharacterEncoder.getSafeText(request.getParameter("isPublishRequest"));
         if (serviceName == null || serviceName.trim().length() == 0) {
     %>
     <p><fmt:message key="service.name.cannot.be.null"/></p>
@@ -44,20 +41,17 @@
         APIPublisherClient client;
         try {
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
-            //ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
             String currentVersion = client.getCurrentApiVersion(serviceName);
-            if(client.checkNumberOfSubcriptions(serviceName, currentVersion)==0) {
+            if (client.checkNumberOfSubcriptions(serviceName, currentVersion) == 0) {
                 String successMsg = serviceName + " - " + currentVersion + " unpublished successfully.";
                 Boolean isUnpublished = client.unpublishAPI(serviceName, currentVersion);
-                if(isUnpublished)
+                if (isUnpublished)
                     CarbonUIMessage.sendCarbonUIMessage(successMsg, CarbonUIMessage.INFO, request);
                 else
-                    CarbonUIMessage.sendCarbonUIMessage("Error occured.!!", CarbonUIMessage.ERROR, request);
-            }
-
-            else {
+                    CarbonUIMessage.sendCarbonUIMessage("Error occurred.!!", CarbonUIMessage.ERROR, request);
+            } else {
                 String warningMsg = "Cannot unpublish the API. Subscribers exists.";
-                CarbonUIMessage.sendCarbonUIMessage(warningMsg,CarbonUIMessage.WARNING, request);
+                CarbonUIMessage.sendCarbonUIMessage(warningMsg, CarbonUIMessage.WARNING, request);
             }
 
             boolean isAPIAvailable = client.isAPIAvailable(serviceName);

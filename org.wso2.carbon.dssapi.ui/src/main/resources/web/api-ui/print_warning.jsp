@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2005-2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+~ Copyright (c) 2005-2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
 ~
 ~ WSO2 Inc. licenses this file to you under the Apache License,
 ~ Version 2.0 (the "License"); you may not use this file except
@@ -23,16 +23,16 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
-<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 
 <style>
     .bg-warning {
         background: #fffacf;
-        border-color: #ffed77;
+        border-color: #baac52;
         border-left: 3px;
         margin-bottom: 10px;
-        padding: 10px 5px 10px 5px;
+        padding: 10px 5px 10px 10px;
     }
+
     a.bg-warning:hover {
         background-color: #f7ecb5;
     }
@@ -45,7 +45,7 @@
 
     String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
     ConfigurationContext configContext =
-    (ConfigurationContext) config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
+            (ConfigurationContext) config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
 
     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
     APIPublisherClient client;
@@ -53,20 +53,21 @@
         client = new APIPublisherClient(cookie, backendServerURL, configContext);
         boolean isAPIAvailable = client.isAPIAvailable(serviceName);
 
-        if(isAPIAvailable) {
+        if (isAPIAvailable) {
 %>
-    <div>
-        <p class="bg-warning"> <img src="images/warning.png"> You are about to edit a data service which already published as an API.</p>
-    </div>
+<div>
+    <p class="bg-warning"><img src="images/warning.png"> You are about to edit a data service which already published as
+        an API.</p>
+</div>
 <%
-        }
-    } catch (Exception e) {
+    }
+} catch (Exception e) {
     String errorMsg = e.getLocalizedMessage();
-    %>
-    <script type="text/javascript">
-        location.href = "error.jsp?errorMsg=<%=errorMsg%>";
-    </script>
-    <%
+%>
+<script type="text/javascript">
+    location.href = "error.jsp?errorMsg=<%=errorMsg%>";
+</script>
+<%
         return;
-        }
+    }
 %>
