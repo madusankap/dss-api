@@ -23,15 +23,14 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
-<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 
 <style>
     .bg-warning {
         background: #fffacf;
-        border-color: #ffed77;
+        border-color: #baac52;
         border-left: 3px;
         margin-bottom: 10px;
-        padding: 10px 5px 10px 5px;
+        padding: 10px 5px 10px 10px;
     }
     a.bg-warning:hover {
         background-color: #f7ecb5;
