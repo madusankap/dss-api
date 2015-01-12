@@ -22,6 +22,7 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
+<%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 
 <fmt:bundle basename="org.wso2.carbon.dssapi.ui.i18n.Resources">
     <%
@@ -41,12 +42,21 @@
 
         String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
         APIPublisherClient client;
+        boolean isApiUpdated = false;
         try {
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
             //ServiceMetaData service = client.getServiceData(serviceName).getServices()[0];
             String currentVersion = client.getCurrentApiVersion(serviceName);
             if(client.checkNumberOfSubcriptions(serviceName, currentVersion)==0)
-                client.updateApi(serviceName, currentVersion);
+                isApiUpdated = client.updateApi(serviceName, currentVersion);
+
+
+            String successMsg = serviceName + " - " + currentVersion + " published successfully.";
+            if(isApiUpdated)
+                CarbonUIMessage.sendCarbonUIMessage(successMsg, CarbonUIMessage.INFO, request);
+            else
+                CarbonUIMessage.sendCarbonUIMessage("Error occured.!!", CarbonUIMessage.ERROR, request);
+
             boolean isAPIAvailable = client.isAPIAvailable(serviceName);
 
             request.setAttribute("serviceName", serviceName);
