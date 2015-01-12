@@ -46,7 +46,7 @@
             if (client.checkNumberOfSubcriptions(serviceName, currentVersion) == 0)
                 isApiUpdated = client.updateApi(serviceName, currentVersion);
 
-            String successMsg = serviceName + " - " + currentVersion + " published successfully.";
+            String successMsg = serviceName + " - " + currentVersion + " updated successfully.";
             if (isApiUpdated)
                 CarbonUIMessage.sendCarbonUIMessage(successMsg, CarbonUIMessage.INFO, request);
             else

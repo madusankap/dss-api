@@ -48,7 +48,7 @@
                 if (isUnpublished)
                     CarbonUIMessage.sendCarbonUIMessage(successMsg, CarbonUIMessage.INFO, request);
                 else
-                    CarbonUIMessage.sendCarbonUIMessage("Error occured.!!", CarbonUIMessage.ERROR, request);
+                    CarbonUIMessage.sendCarbonUIMessage("Error occurred.!!", CarbonUIMessage.ERROR, request);
             } else {
                 String warningMsg = "Cannot unpublish the API. Subscribers exists.";
                 CarbonUIMessage.sendCarbonUIMessage(warningMsg, CarbonUIMessage.WARNING, request);

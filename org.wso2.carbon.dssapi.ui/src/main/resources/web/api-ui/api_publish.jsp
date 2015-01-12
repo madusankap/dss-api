@@ -49,7 +49,7 @@
             if (isPublished)
                 CarbonUIMessage.sendCarbonUIMessage(successMsg, CarbonUIMessage.INFO, request);
             else
-                CarbonUIMessage.sendCarbonUIMessage("Error occured.!!", CarbonUIMessage.ERROR, request);
+                CarbonUIMessage.sendCarbonUIMessage("Error occurred.!!", CarbonUIMessage.ERROR, request);
 
             boolean isAPIAvailable = client.isAPIAvailable(serviceName);
 
