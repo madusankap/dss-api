@@ -5,11 +5,10 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
-<%@ page import="org.wso2.carbon.apimgt.api.model.LifeCycleEvent" %>
 <%@ page import="java.text.SimpleDateFormat" %>
 <%@ page import="java.util.Date" %>
 <!--
-~ Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+~ Copyright (c) 2005-2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
 ~
 ~ WSO2 Inc. licenses this file to you under the Apache License,
 ~ Version 2.0 (the "License"); you may not use this file except
@@ -65,8 +64,9 @@
         </tr>
         <tr class="tableEvenRow">
             <td colspan="2"><input type="button" value="Update API" onclick="updateAPI()"/> <input type="button"
-                                                                                        value="Unpublish API"
-                                                                                        onclick="unpublishAPI()"/></td>
+                                                                                                   value="Unpublish API"
+                                                                                                   onclick="unpublishAPI()"/>
+            </td>
         </tr>
         <tr class="tableOddRow">
             <td colspan="2" style="padding-top: 5px;padding-bottom: 5px">
@@ -75,21 +75,25 @@
                     LifeCycleEventDao[] cycleEventDaos = client.getLifeCycleEvents(serviceName, apiVersion);
                     SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
                     SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss a");
-                    for(LifeCycleEventDao lifeCycleEventDao : cycleEventDaos) {
+                    for (LifeCycleEventDao lifeCycleEventDao : cycleEventDaos) {
                         Date date = lifeCycleEventDao.getDate();
                         String user = lifeCycleEventDao.getUserId();
                 %>
                 <div style="padding-top: 5px; margin-left: -3px">
                     <span style="background-image: url('../api-ui/images/info.png'); background-repeat: no-repeat;background-size: 18px 16px;padding-left: 18px"><%=dateFormat.format(date)%>,<%=timeFormat.format(date)%></span>
-                    <span style="background-image: url('../api-ui/images/user.png');background-repeat: no-repeat;background-size: 16px 16px;padding-left: 18px"><a href="../..//publisher/user?uname=<%=user%>"><%=user%></a></span>
+                    <span style="background-image: url('../api-ui/images/user.png');background-repeat: no-repeat;background-size: 16px 16px;padding-left: 18px"><a
+                            href="../..//publisher/user?uname=<%=user%>"><%=user%>
+                    </a></span>
                     <%
                         if (lifeCycleEventDao.getOldStatus() != "") {
                     %>
-                    <span>State changed from <strong><%=lifeCycleEventDao.getOldStatus().toLowerCase()%></strong> to </span>
+                    <span>State changed from <strong><%=lifeCycleEventDao.getOldStatus().toLowerCase()%>
+                    </strong> to </span>
                     <%
                         }
                     %>
-                    <span><strong><%=lifeCycleEventDao.getNewStatus().toLowerCase()%></strong></span>
+                    <span><strong><%=lifeCycleEventDao.getNewStatus().toLowerCase()%>
+                    </strong></span>
                 </div>
                 <%
                     }
@@ -145,7 +149,7 @@
     <script type="text/javascript">
         jQuery.noConflict();
         function publishAPI() {
-           // alert('Publish API');
+            // alert('Publish API');
             try {
                 var version = document.getElementById("apiVersion").value;
                 //alert(version);
@@ -201,7 +205,7 @@
     <script type="text/javascript">
         jQuery.noConflict();
         function updateAPI() {
-           // alert('Update API');
+            // alert('Update API');
             try {
                 var url = '../api-ui/api_update.jsp?serviceName=<%=serviceName%>';
                 jQuery.ajax({
@@ -214,7 +218,7 @@
                             //String successMessage = "API change request sent and currently processing. Please reload the page after a few seconds.";
                             //CarbonUIMessage.sendCarbonUIMessage(successMessage,CarbonUIMessage.INFO,request,response,"https://10.100.5.179:9443/carbon/service-mgt/service_info.jsp?serviceName="+serviceName);
                          %>
-                       // var successMessage = "API change request sent and currently being processing. Please reload the page after a few seconds.";
+                        // var successMessage = "API change request sent and currently being processing. Please reload the page after a few seconds.";
                         //alert(successMessage);
                         location.reload(true);
                     }
