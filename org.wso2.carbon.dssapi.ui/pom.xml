@@ -44,9 +44,7 @@
                             org.wso2.carbon.dssapi.ui.*;
                         </Export-Package>
                         <Import-Package>
-                            *;resolution:=optional,
-                            org.wso2.carbon.dssapi.stub.*;version="${carbon.platform.package.import.version.range}",
-                            org.wso2.carbon.service.mgt.xsd.*;version="${carbon.platform.package.import.version.range}"
+                            *;resolution:=optional
                         </Import-Package>
                         <Carbon-Component>UIBundle</Carbon-Component>
                     </instructions>

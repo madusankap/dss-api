@@ -69,11 +69,10 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Export-Package>
-                            org.wso2.carbon.dssapi.*;
+                            org.wso2.carbon.dssapi.core.*,
                         </Export-Package>
                         <Import-Package>
-                            !org.wso2.carbon.dataservices.*,
-                            org.wso2.carbon.service.mgt.*,
+                            org.wso2.carbon.dataservices.*,
                             org.wso2.carbon.apimgt.*,
                             org.apache.axis2.*; version="${axis2.osgi.version.range.dss-api}",
                             *;resolution:=optional
