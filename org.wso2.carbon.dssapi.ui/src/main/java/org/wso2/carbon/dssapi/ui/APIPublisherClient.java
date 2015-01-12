@@ -54,8 +54,8 @@ public class APIPublisherClient {
      * @return api availability
      * @throws RemoteException
      */
-    public boolean isAPIAvailable(String serviceName) throws RemoteException {
-        return stub.apiAvailable(serviceName);
+    public boolean checkApiAvailability(String serviceName) throws RemoteException {
+        return stub.checkApiAvailability(serviceName);
     }
 
 
@@ -89,7 +89,7 @@ public class APIPublisherClient {
      * @return number of subscriptions
      * @throws RemoteException
      */
-    public long checkNumberOfSubcriptions(String serviceName, String version) throws RemoteException {
+    public long checkNumberOfSubscriptions(String serviceName, String version) throws RemoteException {
         return stub.viewSubscriptions(serviceName, version);
 
     }

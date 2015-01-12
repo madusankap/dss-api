@@ -44,12 +44,12 @@
             Boolean isPublishRequestBool = Boolean.valueOf(isPublishRequest);
             String currentVersion = client.getCurrentApiVersion(serviceName);
             if (!isPublishRequestBool) {
-                if (client.checkNumberOfSubcriptions(serviceName, currentVersion) == 0)
+                if (client.checkNumberOfSubscriptions(serviceName, currentVersion) == 0)
                     client.unpublishAPI(serviceName, currentVersion);
             } else
                 client.publishAPI(serviceName, currentVersion);
 
-            boolean isAPIAvailable = client.isAPIAvailable(serviceName);
+            boolean isAPIAvailable = client.checkApiAvailability(serviceName);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("isAvailable", isPublishRequest);

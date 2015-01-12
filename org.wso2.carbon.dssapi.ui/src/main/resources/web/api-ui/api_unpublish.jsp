@@ -42,7 +42,7 @@
         try {
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
             String currentVersion = client.getCurrentApiVersion(serviceName);
-            if (client.checkNumberOfSubcriptions(serviceName, currentVersion) == 0) {
+            if (client.checkNumberOfSubscriptions(serviceName, currentVersion) == 0) {
                 String successMsg = serviceName + " - " + currentVersion + " unpublished successfully.";
                 Boolean isUnpublished = client.unpublishAPI(serviceName, currentVersion);
                 if (isUnpublished)
@@ -54,7 +54,7 @@
                 CarbonUIMessage.sendCarbonUIMessage(warningMsg, CarbonUIMessage.WARNING, request);
             }
 
-            boolean isAPIAvailable = client.isAPIAvailable(serviceName);
+            boolean isAPIAvailable = client.checkApiAvailability(serviceName);
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("APIAvailability", isAPIAvailable);
         } catch (Exception e) {

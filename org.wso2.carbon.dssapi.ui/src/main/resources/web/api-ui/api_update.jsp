@@ -43,7 +43,7 @@
         try {
             client = new APIPublisherClient(cookie, backendServerURL, configContext);
             String currentVersion = client.getCurrentApiVersion(serviceName);
-            if (client.checkNumberOfSubcriptions(serviceName, currentVersion) == 0)
+            if (client.checkNumberOfSubscriptions(serviceName, currentVersion) == 0)
                 isApiUpdated = client.updateApi(serviceName, currentVersion);
 
             String successMsg = serviceName + " - " + currentVersion + " updated successfully.";
@@ -52,7 +52,7 @@
             else
                 CarbonUIMessage.sendCarbonUIMessage("Error occurred.!!", CarbonUIMessage.ERROR, request);
 
-            boolean isAPIAvailable = client.isAPIAvailable(serviceName);
+            boolean isAPIAvailable = client.checkApiAvailability(serviceName);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("APIAvailability", isAPIAvailable);

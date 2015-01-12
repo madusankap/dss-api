@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2005-2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2005-2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  WSO2 Inc. licenses this file to you under the Apache License,
  *  Version 2.0 (the "License"); you may not use this file except
@@ -98,7 +98,7 @@ public class APIUtil {
                 apiProvider.addAPI(api);
 
                 try {
-                    createAPI_DOC_Info(api.getId());
+                    createApiDocInfo(api.getId());
                     createApis(api);
                     createAPIResources(api);
                     String apiJSON=((JSONObject)swagger12Json.get("api_doc")).toJSONString();
@@ -291,8 +291,8 @@ public class APIUtil {
      * @param tenantId  tenant domain
      * @return availability of the API
      */
-    public boolean apiAvailable(String serviceId, int tenantId) {
-        boolean apiAvailable = false;
+    public boolean checkApiAvailability(String serviceId, int tenantId) {
+        boolean checkApiAvailability = false;
         String DSSRepositoryPath;
         if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
             DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
@@ -311,7 +311,7 @@ public class APIUtil {
                 while (elements.hasNext()) {
                     OMElement element = elements.next();
                     if ("managedApi".equals(element.getLocalName()) && "true".equals(element.getText())) {
-                        apiAvailable = apiAvailable || true;
+                        checkApiAvailability = checkApiAvailability || true;
                     }
                 }
             }
@@ -320,7 +320,7 @@ public class APIUtil {
         } catch (XMLStreamException e) {
             log.error("couldn't read application xml file", e);
         }
-        return apiAvailable;
+        return checkApiAvailability;
     }
 
     /**
@@ -331,7 +331,7 @@ public class APIUtil {
      * @param tenantDomain tenant domain
      * @return availability of the API
      */
-    public long apiSubscriptions(String serviceId, String username, String tenantDomain, String version) {
+    public long getApiSubscriptions(String serviceId, String username, String tenantDomain, String version) {
         long subscriptionCount = 0;
         APIProvider apiProvider;
         String provider;
@@ -567,7 +567,7 @@ public class APIUtil {
      * @param apiIdentifier API identifier
      * @throws ParseException
      */
-    private void createAPI_DOC_Info(APIIdentifier apiIdentifier) throws ParseException {
+    private void createApiDocInfo(APIIdentifier apiIdentifier) throws ParseException {
         JSONObject api_doc = new JSONObject();
         api_doc.put("apiVersion", apiIdentifier.getVersion());
         api_doc.put("swaggerVersion", "1.2");
