@@ -311,7 +311,7 @@ public class APIUtil {
                 while (elements.hasNext()) {
                     OMElement element = elements.next();
                     if ("managedApi".equals(element.getLocalName()) && "true".equals(element.getText())) {
-                        checkApiAvailability = checkApiAvailability || true;
+                        checkApiAvailability =  true;
                     }
                 }
             }
