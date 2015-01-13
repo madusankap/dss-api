@@ -51,7 +51,7 @@
     APIPublisherClient client;
     try {
         client = new APIPublisherClient(cookie, backendServerURL, configContext);
-        boolean isAPIAvailable = client.isAPIAvailable(serviceName);
+        boolean isAPIAvailable = client.checkApiAvailability(serviceName);
 
         if (isAPIAvailable) {
 %>

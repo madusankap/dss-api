@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2005-2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2005-2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  WSO2 Inc. licenses this file to you under the Apache License,
  *  Version 2.0 (the "License"); you may not use this file except
@@ -47,12 +47,12 @@ public class APIPublisher {
      * @param serviceName name of the service
      * @return availability of api to DataServices
      */
-    public boolean apiAvailable(String serviceName) {
+    public boolean checkApiAvailability(String serviceName) {
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
-    if(log.isDebugEnabled()){
-        log.debug("check api available for service name:"+serviceName);
-    }
-         return new APIUtil().apiAvailable(serviceName,tenantId);
+        if (log.isDebugEnabled()) {
+            log.debug("check api available for service name:" + serviceName);
+        }
+        return new APIUtil().checkApiAvailability(serviceName, tenantId);
     }
 
     /**
@@ -66,10 +66,10 @@ public class APIPublisher {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        if(log.isDebugEnabled()){
-            log.debug("check subscriptions for the API:"+serviceName+"and version:"+version);
+        if (log.isDebugEnabled()) {
+            log.debug("check subscriptions for the API:" + serviceName + "and version:" + version);
         }
-        return new APIUtil().apiSubscriptions(serviceName, username, tenantDomain, version);
+        return new APIUtil().getApiSubscriptions(serviceName, username, tenantDomain, version);
     }
 
     /**
@@ -89,8 +89,8 @@ public class APIPublisher {
                 listApi.add(tempApi);
             }
         }
-        if(log.isDebugEnabled()){
-            log.debug("list api available for service name:"+serviceName);
+        if (log.isDebugEnabled()) {
+            log.debug("list api available for service name:" + serviceName);
         }
         return listApi.toArray(new org.wso2.carbon.dssapi.model.API[listApi.size()]);
     }
@@ -105,8 +105,8 @@ public class APIPublisher {
     public LifeCycleEventDao[] listLifeCycleEvents(String serviceName, String version) {
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        if(log.isDebugEnabled()){
-            log.debug("list life cycle history for API name:"+serviceName+"& version:"+version);
+        if (log.isDebugEnabled()) {
+            log.debug("list life cycle history for API name:" + serviceName + "& version:" + version);
         }
         return new APIUtil().getLifeCycleEventList(serviceName, username, tenantDomain, version);
     }
@@ -131,11 +131,11 @@ public class APIPublisher {
             String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
             new APIUtil().addApi(serviceId, username, tenantDomain, data, version);
             Status = true;
-            if(log.isDebugEnabled()){
-                log.debug("api created for Service Name:"+serviceId+"and for version:"+version);
+            if (log.isDebugEnabled()) {
+                log.debug("api created for Service Name:" + serviceId + "and for version:" + version);
             }
         } catch (Exception e) {
-          log.error("couldn't create api for Service:"+serviceId+"to version:"+version,e);
+            log.error("couldn't create api for Service:" + serviceId + "to version:" + version, e);
         }
         return Status;
     }
@@ -153,8 +153,8 @@ public class APIPublisher {
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
             String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
             Status = new APIUtil().removeApi(serviceId, username, tenantDomain, version);
-            if(log.isDebugEnabled()){
-                log.debug("api for Service:"+serviceId+"on version:"+version+" successfully removed");
+            if (log.isDebugEnabled()) {
+                log.debug("api for Service:" + serviceId + "on version:" + version + " successfully removed");
             }
         } catch (Exception e) {
             log.error("couldn't remove api for Service:" + serviceId + "to version:" + version, e);
@@ -184,11 +184,11 @@ public class APIPublisher {
             String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
             new APIUtil().updateApi(serviceId, username, tenantDomain, data, version);
             Status = true;
-            if(log.isDebugEnabled()){
-                log.debug("api for Service:"+serviceId+"on version:"+version+" successfully updated");
+            if (log.isDebugEnabled()) {
+                log.debug("api for Service:" + serviceId + "on version:" + version + " successfully updated");
             }
         } catch (Exception e) {
-            log.error("couldn't update api for Service:"+serviceId+"to version:"+version,e);
+            log.error("couldn't update api for Service:" + serviceId + "to version:" + version, e);
         }
         return Status;
     }

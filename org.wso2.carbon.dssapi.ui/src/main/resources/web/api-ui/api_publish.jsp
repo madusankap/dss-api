@@ -51,7 +51,7 @@
             else
                 CarbonUIMessage.sendCarbonUIMessage("Error occurred.!!", CarbonUIMessage.ERROR, request);
 
-            boolean isAPIAvailable = client.isAPIAvailable(serviceName);
+            boolean isAPIAvailable = client.checkApiAvailability(serviceName);
 
             request.setAttribute("serviceName", serviceName);
             request.setAttribute("APIAvailability", isAPIAvailable);

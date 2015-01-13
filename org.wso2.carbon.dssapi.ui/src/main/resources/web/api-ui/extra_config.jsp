@@ -36,7 +36,7 @@
     APIPublisherClient client = null;
     try {
         client = new APIPublisherClient(cookie, backendServerURL, configContext);
-        APIAvailability = client.isAPIAvailable(serviceName);
+        APIAvailability = client.checkApiAvailability(serviceName);
     } catch (Exception e) {
         response.setStatus(500);
         CarbonUIMessage uiMsg = new CarbonUIMessage(CarbonUIMessage.ERROR, e.getMessage(), e);
