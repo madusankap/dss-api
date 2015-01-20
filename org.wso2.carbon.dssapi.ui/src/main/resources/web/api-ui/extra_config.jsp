@@ -52,14 +52,33 @@
         </thead>
         <%
             if (APIAvailability) {
+
+        %>
+
+        <!--<script type="text/javascript">
+            changeServiceState(false);
+        </script>-->
+
+        <%
                 apiVersion = client.getCurrentApiVersion(serviceName);
+                LifeCycleEventDao[] cycleEventDaos = client.getLifeCycleEvents(serviceName, apiVersion);
+                SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd',' hh:mm:ss");
         %>
         <tr class="tableOddRow">
             <td><fmt:message key="published.date"/> :
-                <%=client.getPublishedDate(serviceName, apiVersion)%>
+                <%=
+                //client.getPublishedDate(serviceName, apiVersion)
+                dateFormat.format(parseFormat.parse(cycleEventDaos[0].getDate()))
+                %>
             </td>
+        </tr>
+        <tr class="tableOddRow">
             <td><fmt:message key="update.date"/> :
-                <%=client.getUpdatedDate(serviceName, apiVersion)%>
+                <%=
+                //client.getUpdatedDate(serviceName, apiVersion)
+                dateFormat.format(parseFormat.parse(cycleEventDaos[cycleEventDaos.length-1].getDate()))
+                %>
             </td>
         </tr>
         <tr class="tableEvenRow">
@@ -72,15 +91,19 @@
             <td colspan="2" style="padding-top: 5px;padding-bottom: 5px">
                 <strong><fmt:message key="publish.history"/></strong>
                 <%
-                    LifeCycleEventDao[] cycleEventDaos = client.getLifeCycleEvents(serviceName, apiVersion);
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-                    SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss a");
+                   // LifeCycleEventDao[] cycleEventDaos = client.getLifeCycleEvents(serviceName, apiVersion);
+                   // SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+                   // SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd',' hh:mm:ss");
                     for (LifeCycleEventDao lifeCycleEventDao : cycleEventDaos) {
-                        Date date = lifeCycleEventDao.getDate();
+                        //Date date = lifeCycleEventDao.getDate();
                         String user = lifeCycleEventDao.getUserId();
                 %>
                 <div style="padding-top: 5px; margin-left: -3px">
-                    <span style="background-image: url('../api-ui/images/info.png'); background-repeat: no-repeat;background-size: 18px 16px;padding-left: 18px"><%=dateFormat.format(date)%>,<%=timeFormat.format(date)%></span>
+                    <span style="background-image: url('../api-ui/images/info.png'); background-repeat: no-repeat;background-size: 18px 16px;padding-left: 18px">
+                        <%=
+                            dateFormat.format(parseFormat.parse(lifeCycleEventDao.getDate()))
+                        %>
+                    </span>
                     <span style="background-image: url('../api-ui/images/user.png');background-repeat: no-repeat;background-size: 16px 16px;padding-left: 18px"><a
                             href="../..//publisher/user?uname=<%=user%>"><%=user%>
                     </a></span>
@@ -101,7 +124,7 @@
                 <br/>
             </td>
         </tr>
-        <tr class="tableEvenRow">
+        <tr class="tableOddRow">
 
         </tr>
 
