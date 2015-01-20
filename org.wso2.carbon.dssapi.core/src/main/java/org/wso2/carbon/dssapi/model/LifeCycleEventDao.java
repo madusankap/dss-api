@@ -19,16 +19,15 @@
 package org.wso2.carbon.dssapi.model;
 
 import org.wso2.carbon.apimgt.api.model.APIIdentifier;
-
 import java.io.Serializable;
-import java.util.Date;
 
 public class LifeCycleEventDao implements Serializable {
     private APIIdentifier api;
     private String oldStatus;
     private String newStatus;
     private String userId;
-    private Date date;
+    private String date;
+
 
     public APIIdentifier getApi() {
         return api;
@@ -62,11 +61,11 @@ public class LifeCycleEventDao implements Serializable {
         this.userId = userId;
     }
 
-    public Date getDate() {
+    public String getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public void setDate(String date) {
         this.date = date;
     }
 
@@ -74,7 +73,7 @@ public class LifeCycleEventDao implements Serializable {
 
     }
 
-    public LifeCycleEventDao(APIIdentifier api, String oldStatus, String newStatus, String userId, Date date) {
+    public LifeCycleEventDao(APIIdentifier api, String oldStatus, String newStatus, String userId, String date) {
         this.api = api;
         this.oldStatus = oldStatus;
         this.newStatus = newStatus;

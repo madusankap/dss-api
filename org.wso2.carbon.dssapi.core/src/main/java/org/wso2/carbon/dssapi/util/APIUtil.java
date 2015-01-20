@@ -39,6 +39,7 @@ import org.wso2.carbon.dataservices.ui.beans.*;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
@@ -46,6 +47,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -54,7 +56,7 @@ public class APIUtil {
     private static final String HOST_NAME = "carbon.local.ip";
     private static final String APPLICATION_XML = "_application.xml";
     private JSONObject swagger12Json = new JSONObject();
-    private Map<String,JSONArray> resourceMap=new LinkedHashMap<String, JSONArray>();
+    private Map<String, JSONArray> resourceMap = new LinkedHashMap<String, JSONArray>();
     private static final Log log = LogFactory.getLog(APIUtil.class);
 
     /**
@@ -101,11 +103,11 @@ public class APIUtil {
                     createApiDocInfo(api.getId());
                     createApis(api);
                     createAPIResources(api);
-                    String apiJSON=((JSONObject)swagger12Json.get("api_doc")).toJSONString();
+                    String apiJSON = ((JSONObject) swagger12Json.get("api_doc")).toJSONString();
                     apiProvider.updateSwagger12Definition(api.getId(), APIConstants.API_DOC_1_2_RESOURCE_NAME, apiJSON);
-                    JSONArray resources=(JSONArray)swagger12Json.get("resources");
-                    for(Object resource:resources){
-                        JSONObject tempResource=(JSONObject)resource;
+                    JSONArray resources = (JSONArray) swagger12Json.get("resources");
+                    for (Object resource : resources) {
+                        JSONObject tempResource = (JSONObject) resource;
                         String resourcePath = (String) tempResource.get("resourcePath");
                         apiProvider.updateSwagger12Definition(api.getId(), resourcePath, tempResource.toJSONString());
                     }
@@ -151,7 +153,7 @@ public class APIUtil {
                 log.error("couldn't Create API for " + serviceId + "Service", e);
             }
         }
-            }
+    }
 
     /**
      * To create the model of the API
@@ -169,7 +171,7 @@ public class APIUtil {
         try {
             api = new API(identifier);
             api.setContext(apiContext);
-            api.setUriTemplates(getURITemplates(apiEndpoint, authType, data,apiProvider.getTiers()));
+            api.setUriTemplates(getURITemplates(apiEndpoint, authType, data, apiProvider.getTiers()));
             api.setVisibility(APIConstants.API_GLOBAL_VISIBILITY);
             api.addAvailableTiers(apiProvider.getTiers());
             api.setEndpointSecured(false);
@@ -210,7 +212,7 @@ public class APIUtil {
                 template.setHTTPVerb(resource.getMethod());
                 template.setResourceURI(endpoint);
                 template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\\w+[}]", "*"));
-                for(Tier tier:tiers.toArray(new Tier[tiers.size()])){
+                for (Tier tier : tiers.toArray(new Tier[tiers.size()])) {
                     template.setThrottlingTier(tier.getName());
                 }
                 uriTemplates.add(template);
@@ -222,7 +224,7 @@ public class APIUtil {
                 template.setHTTPVerb(getOperationBasedHttpVerbs(operation.getCallQuery().getHref(), data));
                 template.setResourceURI(endpoint);
                 template.setUriTemplate("/" + operation.getName());
-                for(Tier tier:tiers.toArray(new Tier[tiers.size()])){
+                for (Tier tier : tiers.toArray(new Tier[tiers.size()])) {
                     template.setThrottlingTier(tier.getName());
                 }
                 uriTemplates.add(template);
@@ -235,12 +237,12 @@ public class APIUtil {
                 template.setHTTPVerb(getOperationBasedHttpVerbs(operation.getCallQuery().getHref(), data));
                 template.setResourceURI(endpoint);
                 template.setUriTemplate("/" + operation.getName());
-                for(Tier tier:tiers.toArray(new Tier[tiers.size()])){
+                for (Tier tier : tiers.toArray(new Tier[tiers.size()])) {
                     template.setThrottlingTier(tier.getName());
                 }
                 uriTemplates.add(template);
-                addApiArray(template,operation.getCallQuery().getWithParams());
-                         }
+                addApiArray(template, operation.getCallQuery().getWithParams());
+            }
             for (Resource resource : resourceList) {
                 URITemplate template = new URITemplate();
                 if (!"OPTIONS".equals(resource.getMethod())) {
@@ -251,16 +253,17 @@ public class APIUtil {
                 template.setHTTPVerb(resource.getMethod());
                 template.setResourceURI(endpoint);
                 template.setUriTemplate("/" + resource.getPath().replaceAll("[{]\\w+[}]", "*"));
-                for(Tier tier:tiers.toArray(new Tier[tiers.size()])){
+                for (Tier tier : tiers.toArray(new Tier[tiers.size()])) {
                     template.setThrottlingTier(tier.getName());
                 }
                 uriTemplates.add(template);
-                addApiArray(template,resource.getCallQuery().getWithParams());
-                           }
+                addApiArray(template, resource.getCallQuery().getWithParams());
+            }
         }
         return uriTemplates;
     }
-       /**
+
+    /**
      * @param queryId QueryId of the Operation
      * @param data    data service object
      * @return type of http verb can used to operation
@@ -311,7 +314,7 @@ public class APIUtil {
                 while (elements.hasNext()) {
                     OMElement element = elements.next();
                     if ("managedApi".equals(element.getLocalName()) && "true".equals(element.getText())) {
-                        checkApiAvailability =  true;
+                        checkApiAvailability = true;
                     }
                 }
             }
@@ -511,12 +514,14 @@ public class APIUtil {
 
                     for (LifeCycleEvent lifeCycleEvent : lifeCycleEventList) {
                         LifeCycleEventDao lifeCycleEventDao;
+                       // SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+                        //SimpleDateFormat sdf = new SimpleDateFormat("EE MMM dd HH:mm:ss z yyyy", Locale.ENGLISH);
+                        //SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd ',' hh:mm:ss a");
 
                         if ((lifeCycleEvent.getOldStatus() != null)) {
-                            lifeCycleEventDao = new LifeCycleEventDao(apiIdentifier, lifeCycleEvent.getOldStatus().name(), lifeCycleEvent.getNewStatus().name(), lifeCycleEvent.getUserId(), lifeCycleEvent.getDate());
-                        } else {
-                            lifeCycleEventDao = new LifeCycleEventDao(apiIdentifier, "", lifeCycleEvent.getNewStatus().name(), lifeCycleEvent.getUserId(), lifeCycleEvent.getDate());
-                        }
+                            lifeCycleEventDao = new LifeCycleEventDao(apiIdentifier, lifeCycleEvent.getOldStatus().name(), lifeCycleEvent.getNewStatus().name(), lifeCycleEvent.getUserId(), lifeCycleEvent.getDate().toString());
+                        } else
+                            lifeCycleEventDao = new LifeCycleEventDao(apiIdentifier, "", lifeCycleEvent.getNewStatus().name(), lifeCycleEvent.getUserId(), lifeCycleEvent.getDate().toString());
                         lifeCycleEventDaoList.add(lifeCycleEventDao);
                     }
                 }
@@ -550,7 +555,7 @@ public class APIUtil {
         } else {
             providerName = username + "-AT-" + tenantName;
             apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + serviceId + "?wsdl";
-            apiContext = "/api/t/" + tenantName + "/" + serviceId;
+            apiContext = "/t/" + tenantName + "/api/" + serviceId;
         }
 
         String provider = providerName;
@@ -564,6 +569,7 @@ public class APIUtil {
 
     /**
      * To Create api_doc and info json objects in Swagger12 Json
+     *
      * @param apiIdentifier API identifier
      * @throws ParseException
      */
@@ -571,7 +577,7 @@ public class APIUtil {
         JSONObject api_doc = new JSONObject();
         api_doc.put("apiVersion", apiIdentifier.getVersion());
         api_doc.put("swaggerVersion", "1.2");
-        api_doc.put("authorizations",new JSONParser().parse("{\"oauth2\":{\n" +
+        api_doc.put("authorizations", new JSONParser().parse("{\"oauth2\":{\n" +
                 "            \"scopes\":[\n" +
                 "\n" +
                 "            ],\n" +
@@ -590,6 +596,7 @@ public class APIUtil {
 
     /**
      * To Create apis Json Object in swagger12 Json
+     *
      * @param api api Object
      * @throws ParseException
      */
@@ -611,86 +618,86 @@ public class APIUtil {
                     "            \"path\":\"" + resources.next() + "\"\n" +
                     "         }"));
         }
-        JSONObject api_doc=(JSONObject)swagger12Json.get("api_doc");
+        JSONObject api_doc = (JSONObject) swagger12Json.get("api_doc");
         api_doc.put("apis", jsonArray);
         swagger12Json.remove("api_doc");
-        swagger12Json.put("api_doc",api_doc);
+        swagger12Json.put("api_doc", api_doc);
     }
 
     /**
      * To Create API Resources in swagger12 definition
-     * @param api api Object
      *
+     * @param api api Object
      */
-    private void createAPIResources(API api){
-        JSONArray resourcesArray=new JSONArray();
-        Iterator<String> resources=resourceMap.keySet().iterator();
-        while(resources.hasNext()){
-            String resource=resources.next();
-            JSONObject resourcesObject=new JSONObject();
-            resourcesObject.put("apiVersion",api.getId().getVersion());
-            resourcesObject.put("basePath","http://"+System.getProperty(HOST_NAME)+":"+ System.getProperty(HTTP_PORT)+api.getContext()+api.getId().getVersion());
-            resourcesObject.put("swaggerVersion","1.2");
-            resourcesObject.put("resourcePath",resource);
-            resourcesObject.put("apis",resourceMap.get(resource));
+    private void createAPIResources(API api) {
+        JSONArray resourcesArray = new JSONArray();
+        Iterator<String> resources = resourceMap.keySet().iterator();
+        while (resources.hasNext()) {
+            String resource = resources.next();
+            JSONObject resourcesObject = new JSONObject();
+            resourcesObject.put("apiVersion", api.getId().getVersion());
+            resourcesObject.put("basePath", "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + api.getContext() + api.getId().getVersion());
+            resourcesObject.put("swaggerVersion", "1.2");
+            resourcesObject.put("resourcePath", resource);
+            resourcesObject.put("apis", resourceMap.get(resource));
             resourcesArray.add(resourcesObject);
         }
-        swagger12Json.put("resources",resourcesArray);
+        swagger12Json.put("resources", resourcesArray);
     }
 
     /**
-     *To Add api according to the Uri Template to Swagger12  Json
+     * To Add api according to the Uri Template to Swagger12  Json
      *
-     * @param template URITemplate according to path
+     * @param template   URITemplate according to path
      * @param withParams parameters in Sql Query
      */
     private void addApiArray(URITemplate template, List<WithParam> withParams) {
-        String key=template.getUriTemplate().replace("/*","");
-        if(resourceMap.containsKey(key)){
-            JSONArray APIArray=resourceMap.get(key);
-            if(APIArray!=null){
-                JSONObject newApiObject= new JSONObject();
-                newApiObject.put("path",template.getUriTemplate());
-                JSONArray operationsArray =new JSONArray();
+        String key = template.getUriTemplate().replace("/*", "");
+        if (resourceMap.containsKey(key)) {
+            JSONArray APIArray = resourceMap.get(key);
+            if (APIArray != null) {
+                JSONObject newApiObject = new JSONObject();
+                newApiObject.put("path", template.getUriTemplate());
+                JSONArray operationsArray = new JSONArray();
                 JSONObject operationObject = new JSONObject();
                 createOperationObject(withParams, template, operationObject);
                 operationsArray.add(operationObject);
                 newApiObject.put("operations", operationsArray);
                 APIArray.add(newApiObject);
                 resourceMap.remove(key);
-                resourceMap.put(key,APIArray);
-            }else{
-                JSONArray newApiArray=new JSONArray();
-                JSONObject newApiObject= new JSONObject();
-                newApiObject.put("path",template.getUriTemplate());
-                JSONArray operationsArray =new JSONArray();
+                resourceMap.put(key, APIArray);
+            } else {
+                JSONArray newApiArray = new JSONArray();
+                JSONObject newApiObject = new JSONObject();
+                newApiObject.put("path", template.getUriTemplate());
+                JSONArray operationsArray = new JSONArray();
                 JSONObject operationObject = new JSONObject();
                 createOperationObject(withParams, template, operationObject);
                 operationsArray.add(operationObject);
                 newApiObject.put("operations", operationsArray);
                 newApiArray.add(newApiObject);
-                resourceMap.put(key,newApiArray);
+                resourceMap.put(key, newApiArray);
             }
 
-        }else{
-            JSONArray APIArray =new JSONArray();
-            JSONObject newApiObject= new JSONObject();
-            newApiObject.put("path",template.getUriTemplate());
-            JSONArray operationsArray =new JSONArray();
+        } else {
+            JSONArray APIArray = new JSONArray();
+            JSONObject newApiObject = new JSONObject();
+            newApiObject.put("path", template.getUriTemplate());
+            JSONArray operationsArray = new JSONArray();
             JSONObject operationObject = new JSONObject();
             createOperationObject(withParams, template, operationObject);
             operationsArray.add(operationObject);
             newApiObject.put("operations", operationsArray);
             APIArray.add(newApiObject);
-            resourceMap.put(key,APIArray);
+            resourceMap.put(key, APIArray);
         }
     }
 
     /**
-     *To create Operations objects in Swagger12
+     * To create Operations objects in Swagger12
      *
-     * @param withParams parameters in Sql Query
-     * @param template URITemplate according to path
+     * @param withParams      parameters in Sql Query
+     * @param template        URITemplate according to path
      * @param operationObject JSONObject of the Operation in Swagger12
      */
     private void createOperationObject(List<WithParam> withParams, URITemplate template, JSONObject operationObject) {
@@ -726,7 +733,7 @@ public class APIUtil {
         }
         operationObject.put("parameters", parametersArray);
         operationObject.put("auth_type", template.getAuthType());
-        operationObject.put("throttling_tier",template.getThrottlingTiers());
+        operationObject.put("throttling_tier", template.getThrottlingTiers());
     }
 }
 

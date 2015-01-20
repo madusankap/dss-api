@@ -27,6 +27,8 @@ import org.wso2.carbon.dssapi.model.xsd.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.stub.APIPublisherStub;
 
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -114,11 +116,19 @@ public class APIPublisherClient {
      * @return formatted published date
      * @throws RemoteException
      */
-    public String getPublishedDate(String serviceName, String version) throws RemoteException {
+    public String getPublishedDate(String serviceName, String version) throws RemoteException, ParseException {
         LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
-        Date publishedDate = cycleEventDaos[0].getDate();
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
-        return dateFormat.format(publishedDate).toString();
+        SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd',' hh:mm:ss");
+        return dateFormat.format(parseFormat.parse(cycleEventDaos[cycleEventDaos.length - 1].getDate()));
+        //return cycleEventDaos[0].getDate();
+
+        //SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+       // return dateFormat.parse(publishedDate).toString();
+        //return parsedDate.toString();
+        //SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+        //return dateFormat.format(publishedDate).toString();
+        //return publishedDate;
     }
 
     /**
@@ -129,11 +139,21 @@ public class APIPublisherClient {
      * @return formatted updated date
      * @throws RemoteException
      */
-    public String getUpdatedDate(String serviceName, String version) throws RemoteException {
+    public String getUpdatedDate(String serviceName, String version) throws RemoteException, ParseException {
         LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
-        Date publishedDate = cycleEventDaos[cycleEventDaos.length - 1].getDate();
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
-        return dateFormat.format(publishedDate).toString();
+        SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd',' hh:mm:ss");
+        return dateFormat.format(parseFormat.parse(cycleEventDaos[cycleEventDaos.length - 1].getDate()));
+
+       // SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+       // Date parsedDate = dateFormat.parse(publishedDate);
+       // return parsedDate.toString();
+        //Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
+
+        //Timestamp t = publishedDate.
+        //SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+        //return dateFormat.format(publishedDate).toString();
+        //return publishedDate;
     }
 
     /**
