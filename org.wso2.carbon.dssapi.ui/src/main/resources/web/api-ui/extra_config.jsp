@@ -49,6 +49,9 @@
         <tr>
             <th colspan="2" align="left"><fmt:message key="api.management"/></th>
         </tr>
+        <tr>
+            <td colspan="2" align="left"><strong><fmt:message key="api.publish.head"/></strong></td>
+        </tr>
         </thead>
         <%
             if (APIAvailability) {
