@@ -33,10 +33,12 @@ import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.model.*;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
+import org.wso2.carbon.apimgt.impl.AbstractAPIManager;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.dataservices.core.DBUtils;
 import org.wso2.carbon.dataservices.ui.beans.*;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
+import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -51,13 +53,20 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class APIUtil {
+public class APIUtil extends AbstractAPIManager{
     private static final String HTTP_PORT = "mgt.transport.http.port";
     private static final String HOST_NAME = "carbon.local.ip";
     public static final String APPLICATION_XML = "_application.xml";
     private JSONObject swagger12Json = new JSONObject();
     private Map<String, JSONArray> resourceMap = new LinkedHashMap<String, JSONArray>();
     private static final Log log = LogFactory.getLog(APIUtil.class);
+
+    public APIUtil(String username) throws APIManagementException {
+        super(username);
+    }
+
+    public APIUtil() throws APIManagementException {
+    }
 
     /**
      * To get the API provider
@@ -96,11 +105,11 @@ public class APIUtil {
         API api = createApiObject(serviceId, username, tenantName, data, version, apiProvider);
 
         if (api != null) {
-
                 try {
                     createApiDocInfo(api.getId());
                     createApis(api);
                     createAPIResources(api);
+                    org.wso2.carbon.apimgt.impl.utils.APIUtil.createWSDL(registry,api);
                     apiProvider.addAPI(api);
                     String apiJSON = ((JSONObject) swagger12Json.get("api_doc")).toJSONString();
                     apiProvider.updateSwagger12Definition(api.getId(), APIConstants.API_DOC_1_2_RESOURCE_NAME, apiJSON);
@@ -114,6 +123,8 @@ public class APIUtil {
                     log.error("couldn't Create Swagger12Json for Api " + api.getId().getApiName(), e);
                 } catch (APIManagementException e) {
                     log.error("couldn't Create API for " + serviceId + "Service", e);
+                } catch (RegistryException e) {
+                    log.error("couldn't Create WSDL for api " + serviceId + "Service", e);
                 }
             String DSSRepositoryPath;
                 int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -187,6 +198,7 @@ public class APIUtil {
             api.setImplementation("endpoint");
             String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint + "\",\"config\":null},\"wsdlendpointService\":\"" + api.getId().getApiName() + "\",\"wsdlendpointPort\":\"HTTPEndpoint\",\"wsdlendpointServiceSandbox\":\"\",\"wsdlendpointPortSandbox\":\"\",\"endpoint_type\":\"wsdl\"}";
             api.setEndpointConfig(endpointConfig);
+            api.setWsdlUrl(apiEndpoint);
             if (log.isDebugEnabled()) {
                 log.debug("API Object Created for API:" + identifier.getApiName() + "version:" + identifier.getVersion());
             }

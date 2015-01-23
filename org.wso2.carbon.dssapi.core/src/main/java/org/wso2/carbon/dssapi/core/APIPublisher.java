@@ -23,7 +23,9 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.model.API;
+import org.wso2.carbon.apimgt.impl.AbstractAPIManager;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.dataservices.core.admin.DataServiceAdmin;
 import org.wso2.carbon.dataservices.ui.beans.Data;
@@ -38,7 +40,7 @@ import java.util.List;
 /**
  * To handle the API operations
  */
-public class APIPublisher {
+public class APIPublisher{
     private static final Log log = LogFactory.getLog(APIPublisher.class);
 
     /**
@@ -49,10 +51,16 @@ public class APIPublisher {
      */
     public boolean checkApiAvailability(String serviceName) {
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+       boolean status=false;
         if (log.isDebugEnabled()) {
             log.debug("check api available for service name:" + serviceName);
         }
-        return new APIUtil().checkApiAvailability(serviceName, tenantId);
+        try {
+            status= new APIUtil().checkApiAvailability(serviceName, tenantId);
+        } catch (APIManagementException e) {
+            log.error("couldn't Create API for " + serviceName + "Service", e);
+        }
+        return status;
     }
 
     /**
@@ -66,10 +74,16 @@ public class APIPublisher {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        long apiSubscription = 0;
         if (log.isDebugEnabled()) {
             log.debug("check subscriptions for the API:" + serviceName + "and version:" + version);
         }
-        return new APIUtil().getApiSubscriptions(serviceName, username, tenantDomain, version);
+        try {
+            apiSubscription= new APIUtil().getApiSubscriptions(serviceName, username, tenantDomain, version);
+        } catch (APIManagementException e) {
+            log.error("couldn't Create API for " + serviceName + "Service", e);
+        }
+        return apiSubscription;
     }
 
     /**
@@ -81,7 +95,12 @@ public class APIPublisher {
     public org.wso2.carbon.dssapi.model.API[] listApi(String serviceName) {
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        List<API> apiList = new APIUtil().getApi(serviceName, username, tenantDomain);
+        List<API> apiList = null;
+        try {
+            apiList = new APIUtil().getApi(serviceName, username, tenantDomain);
+        } catch (APIManagementException e) {
+            log.error("couldn't list API for " + serviceName + "Service", e);
+        }
         List<org.wso2.carbon.dssapi.model.API> listApi = new ArrayList<org.wso2.carbon.dssapi.model.API>();
         if (!apiList.isEmpty()) {
             for (API api : apiList) {
@@ -105,10 +124,16 @@ public class APIPublisher {
     public LifeCycleEventDao[] listLifeCycleEvents(String serviceName, String version) {
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+       LifeCycleEventDao[] lifeCycleEventDaos = new LifeCycleEventDao[0];
         if (log.isDebugEnabled()) {
             log.debug("list life cycle history for API name:" + serviceName + "& version:" + version);
         }
-        return new APIUtil().getLifeCycleEventList(serviceName, username, tenantDomain, version);
+        try {
+            lifeCycleEventDaos= new APIUtil().getLifeCycleEventList(serviceName, username, tenantDomain, version);
+        } catch (APIManagementException e) {
+           log.error("couldn't list lifecycle events for Service " + serviceName,e);
+        }
+        return lifeCycleEventDaos;
     }
 
     /**
@@ -129,7 +154,7 @@ public class APIPublisher {
             data.populate(configElement);
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
             String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-            new APIUtil().addApi(serviceId, username, tenantDomain, data, version);
+            new APIUtil(username).addApi(serviceId, username, tenantDomain, data, version);
             Status = true;
             if (log.isDebugEnabled()) {
                 log.debug("api created for Service Name:" + serviceId + "and for version:" + version);
