@@ -17,9 +17,7 @@ import org.wso2.carbon.dataservices.core.DBUtils;
 import org.wso2.carbon.dataservices.core.admin.DataServiceAdmin;
 import org.wso2.carbon.dataservices.core.engine.DataService;
 import org.wso2.carbon.dataservices.ui.beans.Data;
-import org.wso2.carbon.dssapi.core.APIPublisher;
 import org.wso2.carbon.dssapi.util.APIUtil;
-
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import java.io.*;
@@ -38,6 +36,8 @@ public class APIObserver implements AxisObserver {
 
     @Override
     public void serviceUpdate(AxisEvent axisEvent, AxisService axisService) {
+        System.out.println("Axis Event:"+axisEvent);
+
         if(axisEvent.getEventType()==AxisEvent.SERVICE_DEPLOY){
             DataService dataService = (DataService)axisService.getParameter(DBConstants.DATA_SERVICE_OBJECT).getValue();
             if(dataService!=null){
