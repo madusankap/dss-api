@@ -33,6 +33,7 @@ import org.json.simple.parser.ParseException;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.model.*;
+import org.wso2.carbon.apimgt.api.model.API;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
 import org.wso2.carbon.context.CarbonContext;
@@ -40,11 +41,17 @@ import org.wso2.carbon.dataservices.common.DBConstants;
 import org.wso2.carbon.dataservices.core.DBUtils;
 import org.wso2.carbon.dataservices.core.engine.DataService;
 import org.wso2.carbon.dataservices.ui.beans.*;
-import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
+import org.wso2.carbon.dssapi.model.*;
+import org.wso2.carbon.dssapi.model.Application;
 import org.wso2.carbon.dssapi.observer.DataHolder;
 import org.wso2.carbon.service.mgt.ServiceAdmin;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
@@ -125,30 +132,13 @@ public class APIUtil {
                 String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
                 File file = new File(applicationXmlPath);
                 if (!file.exists()) {
-                    XMLStreamWriter xmlStreamWriter = DBUtils.getXMLOutputFactory().createXMLStreamWriter(new FileOutputStream(file));
-                    xmlStreamWriter.writeStartDocument();
-                    xmlStreamWriter.writeStartElement("api");
-                    xmlStreamWriter.writeStartElement("managedApi");
-                    xmlStreamWriter.writeCharacters("true");
-                    xmlStreamWriter.writeEndElement();
-                    xmlStreamWriter.writeStartElement("version");
-                    xmlStreamWriter.writeCharacters(version);
-                    xmlStreamWriter.writeEndElement();
-                    xmlStreamWriter.writeStartElement("userName");
-                    xmlStreamWriter.writeCharacters(username);
-                    xmlStreamWriter.writeEndElement();
-                    xmlStreamWriter.writeStartElement("tenantDomain");
-                    xmlStreamWriter.writeCharacters(tenantName);
-                    xmlStreamWriter.writeEndElement();
-                    xmlStreamWriter.writeStartElement("deployedTime");
-                    xmlStreamWriter.writeCharacters(deployedTime);
-                    xmlStreamWriter.writeEndElement();
-                    xmlStreamWriter.writeEndElement();
-                    xmlStreamWriter.writeEndDocument();
-                    xmlStreamWriter.flush();
-                    xmlStreamWriter.close();
+                    Application application= new Application(true,deployedTime,username,version,tenantName);
+                    JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
+                    Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+                    jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+                    jaxbMarshaller.marshal(application, file);
                       if (log.isDebugEnabled()) {
-                        log.debug("API created successfully for " + serviceId + "getParameter(DBConstants.DATA_SERVICE_OBJECT).getValue(); Service");
+                        log.debug("API created successfully for " + serviceId );
                     }
                 }
             } catch (FileNotFoundException e) {
@@ -314,22 +304,13 @@ public class APIUtil {
             String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
             File file = new File(applicationXmlPath);
             if (file.exists()) {
-                XMLStreamReader parser = DBUtils.getXMLInputFactory().createXMLStreamReader(
-                        new FileInputStream(file));
-                StAXOMBuilder builder = new StAXOMBuilder(parser);
-                OMElement documentElement = builder.getDocumentElement();
-                Iterator<OMElement> elements = documentElement.getChildElements();
-                while (elements.hasNext()) {
-                    OMElement element = elements.next();
-                    if ("managedApi".equals(element.getLocalName()) && "true".equals(element.getText())) {
-                        checkApiAvailability = true;
-                    }
-                }
+                JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
+                Unmarshaller jaxbUnMarshaller = jaxbContext.createUnmarshaller();
+                Application application = (Application) jaxbUnMarshaller.unmarshal(file);
+                checkApiAvailability=application.getManagedApi();
             }
-        } catch (FileNotFoundException e) {
-            log.error("application.xml file couldn't be found on path:" + DSSRepositoryPath, e);
-        } catch (XMLStreamException e) {
-            log.error("couldn't read application xml file", e);
+        } catch (JAXBException e) {
+          log.error("Couldn't parse xml file",e);
         }
         return checkApiAvailability;
     }
@@ -443,28 +424,17 @@ public class APIUtil {
             String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
             File file = new File(applicationXmlPath);
             if (file.exists()) {
-                XMLStreamReader parser = DBUtils.getXMLInputFactory().createXMLStreamReader(
-                        new FileInputStream(file));
-                StAXOMBuilder builder = new StAXOMBuilder(parser);
-                OMElement documentElement = builder.getDocumentElement();
-                Iterator<OMElement> elements = documentElement.getChildElements();
-                while (elements.hasNext()) {
-                    OMElement element = elements.next();
-                    if ("version".equals(element.getLocalName())) {
-                        version = element.getText();
-                    }
-                }
+                JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
+                Unmarshaller jaxbUnMarshaller = jaxbContext.createUnmarshaller();
+                Application application = (Application) jaxbUnMarshaller.unmarshal(file);
+                version=application.getVersion();
             }
-        } catch (FileNotFoundException e) {
-            log.error("application.xml file couldn't be found on path:" + DSSRepositoryPath, e);
-        } catch (XMLStreamException e) {
-            log.error("couldn't read application xml file", e);
-        }
-        try {
             apiList = new ArrayList<API>();
             apiList.add(apiProvider.getAPI(new APIIdentifier(providerName, serviceId, version)));
         } catch (APIManagementException e) {
             log.error("couldn't find api for Service:" + serviceId, e);
+        } catch (JAXBException e) {
+            log.error("Couldn't parse xml file",e);
         }
         return apiList;
     }
@@ -492,8 +462,10 @@ public class APIUtil {
                 api.setStatus(APIStatus.PROTOTYPED);
                 updateSwagger12Definition(api,apiProvider);
                 apiProvider.changeAPIStatus(api,APIStatus.PUBLISHED,username,false);
-            } catch (APIManagementException e) {
+                } catch (APIManagementException e) {
                 log.error("error while updating api:" + serviceId + "for version:" + version, e);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
