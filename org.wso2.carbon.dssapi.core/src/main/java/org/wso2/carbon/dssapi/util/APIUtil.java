@@ -21,7 +21,9 @@ package org.wso2.carbon.dssapi.util;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
+import org.apache.axis2.description.AxisService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.simple.JSONArray;
@@ -31,17 +33,25 @@ import org.json.simple.parser.ParseException;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.model.*;
+import org.wso2.carbon.apimgt.api.model.API;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
-import org.wso2.carbon.apimgt.impl.AbstractAPIManager;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.dataservices.common.DBConstants;
 import org.wso2.carbon.dataservices.core.DBUtils;
+import org.wso2.carbon.dataservices.core.engine.DataService;
 import org.wso2.carbon.dataservices.ui.beans.*;
-import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
-import org.wso2.carbon.registry.core.exceptions.RegistryException;
+import org.wso2.carbon.dssapi.model.*;
+import org.wso2.carbon.dssapi.model.Application;
+import org.wso2.carbon.dssapi.observer.DataHolder;
+import org.wso2.carbon.service.mgt.ServiceAdmin;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
@@ -53,20 +63,13 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class APIUtil extends AbstractAPIManager{
+public class APIUtil {
     private static final String HTTP_PORT = "mgt.transport.http.port";
     private static final String HOST_NAME = "carbon.local.ip";
     public static final String APPLICATION_XML = "_application.xml";
     private JSONObject swagger12Json = new JSONObject();
     private Map<String, JSONArray> resourceMap = new LinkedHashMap<String, JSONArray>();
     private static final Log log = LogFactory.getLog(APIUtil.class);
-
-    public APIUtil(String username) throws APIManagementException {
-        super(username);
-    }
-
-    public APIUtil() throws APIManagementException {
-    }
 
     /**
      * To get the API provider
@@ -99,73 +102,52 @@ public class APIUtil extends AbstractAPIManager{
         APIProvider apiProvider;
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
             apiProvider = getAPIProvider(username);
+
+
         } else {
             apiProvider = getAPIProvider(username + "@" + tenantName);
         }
         API api = createApiObject(serviceId, username, tenantName, data, version, apiProvider);
 
         if (api != null) {
-                try {
-                    createApiDocInfo(api.getId());
-                    createApis(api);
-                    createAPIResources(api);
-                    org.wso2.carbon.apimgt.impl.utils.APIUtil.createWSDL(registry,api);
-                    apiProvider.addAPI(api);
-                    String apiJSON = ((JSONObject) swagger12Json.get("api_doc")).toJSONString();
-                    apiProvider.updateSwagger12Definition(api.getId(), APIConstants.API_DOC_1_2_RESOURCE_NAME, apiJSON);
-                    JSONArray resources = (JSONArray) swagger12Json.get("resources");
-                    for (Object resource : resources) {
-                        JSONObject tempResource = (JSONObject) resource;
-                        String resourcePath = (String) tempResource.get("resourcePath");
-                        apiProvider.updateSwagger12Definition(api.getId(), resourcePath, tempResource.toJSONString());
-                    }
-                } catch (ParseException e) {
-                    log.error("couldn't Create Swagger12Json for Api " + api.getId().getApiName(), e);
-                } catch (APIManagementException e) {
-                    log.error("couldn't Create API for " + serviceId + "Service", e);
-                } catch (RegistryException e) {
-                    log.error("couldn't Create WSDL for api " + serviceId + "Service", e);
-                }
-            String DSSRepositoryPath;
-                int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
 
-                if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
-                    DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
-                } else {
-                    DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
-                }
-                try {
-                    String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
-                    File file = new File(applicationXmlPath);
-                    if (!file.exists()) {
-                        XMLStreamWriter xmlStreamWriter = DBUtils.getXMLOutputFactory().createXMLStreamWriter(new FileOutputStream(file));
-                        xmlStreamWriter.writeStartDocument();
-                        xmlStreamWriter.writeStartElement("api");
-                        xmlStreamWriter.writeStartElement("managedApi");
-                        xmlStreamWriter.writeCharacters("true");
-                        xmlStreamWriter.writeEndElement();
-                        xmlStreamWriter.writeStartElement("version");
-                        xmlStreamWriter.writeCharacters(version);
-                        xmlStreamWriter.writeEndElement();
-                        xmlStreamWriter.writeStartElement("userName");
-                        xmlStreamWriter.writeCharacters(username);
-                        xmlStreamWriter.writeEndElement();
-                        xmlStreamWriter.writeStartElement("tenantDomain");
-                        xmlStreamWriter.writeCharacters(tenantName);
-                        xmlStreamWriter.writeEndElement();
-                        xmlStreamWriter.writeEndElement();
-                        xmlStreamWriter.writeEndDocument();
-                        xmlStreamWriter.flush();
-                        xmlStreamWriter.close();
-                        if (log.isDebugEnabled()) {
-                            log.debug("API created successfully for " + serviceId + " Service");
-                        }
+            try {
+                apiProvider.addAPI(api);
+                updateSwagger12Definition(api,apiProvider);
+                api.setStatus(APIStatus.CREATED);
+                apiProvider.changeAPIStatus(api,APIStatus.PUBLISHED,username,false);
+            }  catch (APIManagementException e) {
+                log.error("couldn't Create API for " + serviceId + "Service", e);
+            }
+            String DSSRepositoryPath;
+            int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+            if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
+                DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
+            } else {
+                DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
+            }
+            try {
+                String deployedTime=new ServiceAdmin(DataHolder.getConfigurationContext().getAxisConfiguration()).getServiceData(serviceId).getServiceDeployedTime();
+                String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
+                File file = new File(applicationXmlPath);
+                if (!file.exists()) {
+                    Application application= new Application(true,deployedTime,username,version,tenantName);
+                    JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
+                    Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+                    jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+                    jaxbMarshaller.marshal(application, file);
+                      if (log.isDebugEnabled()) {
+                        log.debug("API created successfully for " + serviceId );
                     }
-                } catch (FileNotFoundException e) {
-                    log.error("couldn't found path :" + DSSRepositoryPath + " application xml file for " + serviceId + "Service", e);
-                } catch (XMLStreamException e) {
-                    log.error("couldn't write application xml file for " + serviceId + "Service", e);
                 }
+            } catch (FileNotFoundException e) {
+                log.error("couldn't found path :" + DSSRepositoryPath + " application xml file for " + serviceId + "Service", e);
+            } catch (XMLStreamException e) {
+                log.error("couldn't write application xml file for " + serviceId + "Service", e);
+            } catch (Exception e) {
+                log.error("Couldn't get ServiceMetaData Object for the service "+serviceId,e);
+            }
 
 
         }
@@ -191,14 +173,13 @@ public class APIUtil extends AbstractAPIManager{
             api.setVisibility(APIConstants.API_GLOBAL_VISIBILITY);
             api.addAvailableTiers(apiProvider.getTiers());
             api.setEndpointSecured(false);
-            api.setStatus(APIStatus.PUBLISHED);
+            api.setStatus(APIStatus.CREATED);
             api.setTransports(Constants.TRANSPORT_HTTP + "," + Constants.TRANSPORT_HTTPS);
             api.setSubscriptionAvailability(APIConstants.SUBSCRIPTION_TO_ALL_TENANTS);
             api.setResponseCache(APIConstants.DISABLED);
             api.setImplementation("endpoint");
-            String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint + "\",\"config\":null},\"wsdlendpointService\":\"" + api.getId().getApiName() + "\",\"wsdlendpointPort\":\"HTTPEndpoint\",\"wsdlendpointServiceSandbox\":\"\",\"wsdlendpointPortSandbox\":\"\",\"endpoint_type\":\"wsdl\"}";
+            String endpointConfig = "{\"production_endpoints\":{\"url\":\""+apiEndpoint+"\",\"config\":null},\"endpoint_type\":\"http\"}";
             api.setEndpointConfig(endpointConfig);
-            api.setWsdlUrl(apiEndpoint);
             if (log.isDebugEnabled()) {
                 log.debug("API Object Created for API:" + identifier.getApiName() + "version:" + identifier.getVersion());
             }
@@ -323,22 +304,13 @@ public class APIUtil extends AbstractAPIManager{
             String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
             File file = new File(applicationXmlPath);
             if (file.exists()) {
-                XMLStreamReader parser = DBUtils.getXMLInputFactory().createXMLStreamReader(
-                        new FileInputStream(file));
-                StAXOMBuilder builder = new StAXOMBuilder(parser);
-                OMElement documentElement = builder.getDocumentElement();
-                Iterator<OMElement> elements = documentElement.getChildElements();
-                while (elements.hasNext()) {
-                    OMElement element = elements.next();
-                    if ("managedApi".equals(element.getLocalName()) && "true".equals(element.getText())) {
-                        checkApiAvailability = true;
-                    }
-                }
+                JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
+                Unmarshaller jaxbUnMarshaller = jaxbContext.createUnmarshaller();
+                Application application = (Application) jaxbUnMarshaller.unmarshal(file);
+                checkApiAvailability=application.getManagedApi();
             }
-        } catch (FileNotFoundException e) {
-            log.error("application.xml file couldn't be found on path:" + DSSRepositoryPath, e);
-        } catch (XMLStreamException e) {
-            log.error("couldn't read application xml file", e);
+        } catch (JAXBException e) {
+          log.error("Couldn't parse xml file",e);
         }
         return checkApiAvailability;
     }
@@ -452,28 +424,17 @@ public class APIUtil extends AbstractAPIManager{
             String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
             File file = new File(applicationXmlPath);
             if (file.exists()) {
-                XMLStreamReader parser = DBUtils.getXMLInputFactory().createXMLStreamReader(
-                        new FileInputStream(file));
-                StAXOMBuilder builder = new StAXOMBuilder(parser);
-                OMElement documentElement = builder.getDocumentElement();
-                Iterator<OMElement> elements = documentElement.getChildElements();
-                while (elements.hasNext()) {
-                    OMElement element = elements.next();
-                    if ("version".equals(element.getLocalName())) {
-                        version = element.getText();
-                    }
-                }
+                JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
+                Unmarshaller jaxbUnMarshaller = jaxbContext.createUnmarshaller();
+                Application application = (Application) jaxbUnMarshaller.unmarshal(file);
+                version=application.getVersion();
             }
-        } catch (FileNotFoundException e) {
-            log.error("application.xml file couldn't be found on path:" + DSSRepositoryPath, e);
-        } catch (XMLStreamException e) {
-            log.error("couldn't read application xml file", e);
-        }
-        try {
             apiList = new ArrayList<API>();
             apiList.add(apiProvider.getAPI(new APIIdentifier(providerName, serviceId, version)));
         } catch (APIManagementException e) {
             log.error("couldn't find api for Service:" + serviceId, e);
+        } catch (JAXBException e) {
+            log.error("Couldn't parse xml file",e);
         }
         return apiList;
     }
@@ -496,9 +457,15 @@ public class APIUtil extends AbstractAPIManager{
         API api = createApiObject(serviceId, username, tenantName, data, version, apiProvider);
         if (api != null) {
             try {
+                apiProvider.changeAPIStatus(api,APIStatus.PROTOTYPED,username,false);
                 apiProvider.updateAPI(api);
-            } catch (APIManagementException e) {
+                api.setStatus(APIStatus.PROTOTYPED);
+                updateSwagger12Definition(api,apiProvider);
+                apiProvider.changeAPIStatus(api,APIStatus.PUBLISHED,username,false);
+                } catch (APIManagementException e) {
                 log.error("error while updating api:" + serviceId + "for version:" + version, e);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
@@ -531,7 +498,7 @@ public class APIUtil extends AbstractAPIManager{
 
                     for (LifeCycleEvent lifeCycleEvent : lifeCycleEventList) {
                         LifeCycleEventDao lifeCycleEventDao;
-                       // SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+                        // SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
                         //SimpleDateFormat sdf = new SimpleDateFormat("EE MMM dd HH:mm:ss z yyyy", Locale.ENGLISH);
                         //SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd ',' hh:mm:ss a");
 
@@ -622,10 +589,10 @@ public class APIUtil extends AbstractAPIManager{
         JSONArray jsonArray = new JSONArray();
         Set<URITemplate> uriTemplateSet=api.getUriTemplates();
         Set<URITemplate> tempUriTemplates=new HashSet<URITemplate>();
-       for (URITemplate uriTemplate:uriTemplateSet){
+        for (URITemplate uriTemplate:uriTemplateSet){
             String uriTemplateString = uriTemplate.getUriTemplate();
             if (Pattern.compile("[/][{]\\w+[}]").matcher(uriTemplateString).find()) {
-               String  tempUriTemplate=uriTemplateString.replaceAll("[/][{]\\w+[}]", "");
+                String  tempUriTemplate=uriTemplateString.replaceAll("[/][{]\\w+[}]", "");
                 resourceMap.add(tempUriTemplate);
 
                 uriTemplate.setUriTemplate(uriTemplateString.replaceFirst("[/][{]\\w+[}]", "/*"));
@@ -634,9 +601,9 @@ public class APIUtil extends AbstractAPIManager{
                 resourceMap.add(uriTemplateString);
                 tempUriTemplates.add(uriTemplate);
             }
-                   }
+        }
         api.setUriTemplates(tempUriTemplates);
-              for (String resource:resourceMap){
+        for (String resource:resourceMap){
             jsonArray.add(new JSONParser().parse("{\n" +
                     "            \"description\":\"\",\n" +
                     "            \"path\":\"" + resource + "\"\n" +
@@ -732,7 +699,7 @@ public class APIUtil extends AbstractAPIManager{
         Matcher paramNamePattern=Pattern.compile("[{]\\w+[}]").matcher(template.getUriTemplate());
         try {
             if(paramNamePattern.find()){
-                 pathParam=paramNamePattern.group().replace("{","");
+                pathParam=paramNamePattern.group().replace("{","");
                 pathParam=pathParam.replace("}","");
                 parametersArray.add(new JSONParser().parse("{\n" +
                         "                           \"description\":\"Request Body\",\n" +
@@ -743,32 +710,32 @@ public class APIUtil extends AbstractAPIManager{
                         "                           \"paramType\":\"path\"\n" +
                         "                        }"));
             }
-                for (WithParam param : withParams) {
-                        if(!param.getName().equals(pathParam)){
-                            if ("GET".equals(template.getHTTPVerb().toUpperCase())) {
+            for (WithParam param : withParams) {
+                if(!param.getName().equals(pathParam)){
+                    if ("GET".equals(template.getHTTPVerb().toUpperCase())) {
 
-                                parametersArray.add(new JSONParser().parse("{\n" +
-                                        "                           \"description\":\"Request Body\",\n" +
-                                        "                           \"name\":\"" + param.getName() + "\",\n" +
-                                        "                           \"allowMultiple\":false,\n" +
-                                        "                           \"required\":true,\n" +
-                                        "                           \"type\":\"string\",\n" +
-                                        "                           \"paramType\":\"query\"\n" +
-                                        "                        }"));
-                            } else {
-                                parametersArray.add(new JSONParser().parse("{\n" +
-                                        "                           \"description\":\"Request Body\",\n" +
-                                        "                           \"name\":\"" + param.getName() + "\",\n" +
-                                        "                           \"allowMultiple\":false,\n" +
-                                        "                           \"required\":true,\n" +
-                                        "                           \"type\":\"string\",\n" +
-                                        "                           \"paramType\":\"form\"\n" +
-                                        "                        }"));
-                            }
-                        }
-
-
+                        parametersArray.add(new JSONParser().parse("{\n" +
+                                "                           \"description\":\"Request Body\",\n" +
+                                "                           \"name\":\"" + param.getName() + "\",\n" +
+                                "                           \"allowMultiple\":false,\n" +
+                                "                           \"required\":true,\n" +
+                                "                           \"type\":\"string\",\n" +
+                                "                           \"paramType\":\"query\"\n" +
+                                "                        }"));
+                    } else {
+                        parametersArray.add(new JSONParser().parse("{\n" +
+                                "                           \"description\":\"Request Body\",\n" +
+                                "                           \"name\":\"" + param.getName() + "\",\n" +
+                                "                           \"allowMultiple\":false,\n" +
+                                "                           \"required\":true,\n" +
+                                "                           \"type\":\"string\",\n" +
+                                "                           \"paramType\":\"form\"\n" +
+                                "                        }"));
+                    }
                 }
+
+
+            }
 
         } catch (ParseException e) {
             log.error("Couldn't parse swagger parameter Json", e);
@@ -778,5 +745,30 @@ public class APIUtil extends AbstractAPIManager{
         operationObject.put("auth_type", template.getAuthType());
         operationObject.put("throttling_tier", template.getThrottlingTiers());
     }
-}
 
+    /**
+     * To Update Swagger12 definition according to api
+     * @param api api Object
+     * @param apiProvider API Provider
+     * @throws APIManagementException
+     */
+    public void updateSwagger12Definition(API api,APIProvider apiProvider) throws APIManagementException {
+        try {
+            createApiDocInfo(api.getId());
+            createApis(api);
+            createAPIResources(api);
+            String apiJSON = ((JSONObject) swagger12Json.get("api_doc")).toJSONString();
+            apiProvider.updateSwagger12Definition(api.getId(), APIConstants.API_DOC_1_2_RESOURCE_NAME, apiJSON);
+            JSONArray resources = (JSONArray) swagger12Json.get("resources");
+            for (Object resource : resources) {
+                JSONObject tempResource = (JSONObject) resource;
+                String resourcePath = (String) tempResource.get("resourcePath");
+                apiProvider.updateSwagger12Definition(api.getId(), resourcePath, tempResource.toJSONString());
+            }
+        } catch (ParseException e) {
+            log.error("couldn't Create Swagger12Json for Api " + api.getId().getApiName(), e);
+        }
+
+
+    }
+}
