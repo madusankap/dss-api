@@ -17,10 +17,8 @@
     <modules>
         <module>org.wso2.carbon.dssapi.core</module>
         <module>org.wso2.carbon.dssapi.ui</module>
-
+        <module>org.wso2.carbon.dssapi.stub</module>
     </modules>
-
-
     <build>
         <pluginManagement>
             <plugins>
