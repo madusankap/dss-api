@@ -41,6 +41,7 @@ import org.wso2.carbon.dataservices.common.DBConstants;
 import org.wso2.carbon.dataservices.core.DBUtils;
 import org.wso2.carbon.dataservices.core.engine.DataService;
 import org.wso2.carbon.dataservices.ui.beans.*;
+import org.wso2.carbon.dssapi.core.DSSAPIException;
 import org.wso2.carbon.dssapi.model.*;
 import org.wso2.carbon.dssapi.model.Application;
 import org.wso2.carbon.dssapi.observer.DataHolder;
@@ -768,7 +769,17 @@ public class APIUtil {
         } catch (ParseException e) {
             log.error("couldn't Create Swagger12Json for Api " + api.getId().getApiName(), e);
         }
+    }
 
+    /**
+     * This method is used to handle exceptions
+     * @param errorMessage error
+     * @param e throwable error
+     * @throws DSSAPIException
+     */
 
+    public static void handleException(String errorMessage, Throwable e) throws DSSAPIException {
+        log.error(errorMessage, e);
+        throw new DSSAPIException(errorMessage, e);
     }
 }

@@ -21,6 +21,7 @@ package org.wso2.carbon.dssapi.core;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axis2.AxisFault;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.model.API;
@@ -30,6 +31,7 @@ import org.wso2.carbon.dataservices.ui.beans.Data;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.util.APIUtil;
 
+import javax.xml.stream.XMLStreamException;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -117,7 +119,7 @@ public class APIPublisher {
      * @param serviceId service id of the service
      * @param version   version of the api
      */
-    public boolean addApi(String serviceId, String version) {
+    public boolean addApi(String serviceId, String version) throws DSSAPIException {
         String serviceContents;
         boolean Status = false;
         try {
@@ -134,8 +136,10 @@ public class APIPublisher {
             if (log.isDebugEnabled()) {
                 log.debug("api created for Service Name:" + serviceId + "and for version:" + version);
             }
-        } catch (Exception e) {
-            log.error("couldn't create api for Service:" + serviceId + "to version:" + version, e);
+        } catch (AxisFault axisFault) {
+            APIUtil.handleException("Couldn't create api for Service: " + serviceId, axisFault);
+        } catch (XMLStreamException e) {
+            APIUtil.handleException("Couldn't create api for Service: " + serviceId, e);
         }
         return Status;
     }
@@ -147,18 +151,16 @@ public class APIPublisher {
      * @param version   version of the api want to remove
      * @return api is removed from api manager
      */
-    public boolean removeApi(String serviceId, String version) {
+    public boolean removeApi(String serviceId, String version) throws DSSAPIException {
         boolean Status = false;
-        try {
-            String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-            Status = new APIUtil().removeApi(serviceId, username, tenantDomain, version);
-            if (log.isDebugEnabled()) {
-                log.debug("api for Service:" + serviceId + "on version:" + version + " successfully removed");
-            }
-        } catch (Exception e) {
-            log.error("couldn't remove api for Service:" + serviceId + "to version:" + version, e);
+
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        Status = new APIUtil().removeApi(serviceId, username, tenantDomain, version);
+        if (log.isDebugEnabled()) {
+            log.debug("api for Service:" + serviceId + "on version:" + version + " successfully removed");
         }
+
         return Status;
     }
 
@@ -168,9 +170,8 @@ public class APIPublisher {
      *
      * @param serviceId service id of the service
      * @param version   version of the api
-     * @throws Exception
      */
-    public boolean updateApi(String serviceId, String version) {
+    public boolean updateApi(String serviceId, String version) throws DSSAPIException{
         String serviceContents;
         boolean Status = false;
         try {
@@ -187,8 +188,10 @@ public class APIPublisher {
             if (log.isDebugEnabled()) {
                 log.debug("api for Service:" + serviceId + "on version:" + version + " successfully updated");
             }
-        } catch (Exception e) {
-            log.error("couldn't update api for Service:" + serviceId + "to version:" + version, e);
+        } catch (AxisFault axisFault) {
+            APIUtil.handleException("Couldn't update api for Service: " + serviceId, axisFault);
+        } catch (XMLStreamException e) {
+            APIUtil.handleException("Couldn't update api for Service: " + serviceId, e);
         }
         return Status;
     }
