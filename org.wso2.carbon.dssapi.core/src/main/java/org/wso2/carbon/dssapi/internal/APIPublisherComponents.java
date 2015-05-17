@@ -9,8 +9,13 @@ import org.wso2.carbon.core.multitenancy.TenantAxisConfiguration;
 import org.wso2.carbon.core.multitenancy.TenantAxisConfigurator;
 import org.wso2.carbon.core.multitenancy.utils.TenantAxisUtils;
 import org.wso2.carbon.dssapi.observer.APIObserver;
+import org.wso2.carbon.dssapi.org.wso2.carbon.dssapi.valve.DSSAPIValve;
+import org.wso2.carbon.tomcat.ext.valves.CarbonTomcatValve;
+import org.wso2.carbon.tomcat.ext.valves.TomcatValveContainer;
 import org.wso2.carbon.utils.Axis2ConfigurationContextObserver;
 import org.wso2.carbon.utils.ConfigurationContextService;
+
+import java.util.ArrayList;
 
 /**
 
@@ -31,7 +36,10 @@ public class APIPublisherComponents {
            axisConfig.addObservers(apiObserver);
              APIPublisherConfigurator apiPublisherConfigurator =new APIPublisherConfigurator();
              ctxt.getBundleContext().registerService(Axis2ConfigurationContextObserver.class.getName(), apiPublisherConfigurator, null);
-        }
+             ArrayList<CarbonTomcatValve> valves = new ArrayList<CarbonTomcatValve>();
+             valves.add(new DSSAPIValve());
+             TomcatValveContainer.addValves(valves);
+         }
     }
     protected void setConfigurationContextService(ConfigurationContextService cfgCtxService) {
         if (log.isDebugEnabled()) {
