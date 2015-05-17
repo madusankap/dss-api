@@ -56,7 +56,8 @@ public class APIObserver implements AxisObserver {
     public void serviceUpdate(AxisEvent axisEvent, AxisService axisService) {
 
         if (axisEvent.getEventType() == AxisEvent.SERVICE_DEPLOY) {
-            DataService dataService = (DataService) axisService.getParameter(DBConstants.DATA_SERVICE_OBJECT).getValue();
+            DataService dataService =
+                    (DataService) axisService.getParameter(DBConstants.DATA_SERVICE_OBJECT).getValue();
             if (dataService != null) {
                 String location = dataService.getDsLocation();
                 location = location.substring(0, location.lastIndexOf("/"));
@@ -68,15 +69,19 @@ public class APIObserver implements AxisObserver {
                         JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
                         Unmarshaller jaxbUnMarshaller = jaxbContext.createUnmarshaller();
                         application = (Application) jaxbUnMarshaller.unmarshal(file);
-                        String serviceContents = new DataServiceAdmin().getDataServiceContentAsString(dataService.getName());
+                        String serviceContents =
+                                new DataServiceAdmin().getDataServiceContentAsString(dataService.getName());
                         InputStream ins = new ByteArrayInputStream(serviceContents.getBytes());
                         OMElement configElement = (new StAXOMBuilder(ins)).getDocumentElement();
                         configElement.build();
                         Data data = new Data();
                         data.populate(configElement);
-                        String tempDeployedTime = new ServiceAdmin(DataHolder.getConfigurationContext().getAxisConfiguration()).getServiceData(data.getName()).getServiceDeployedTime();
+                        String tempDeployedTime =
+                                new ServiceAdmin(DataHolder.getConfigurationContext().getAxisConfiguration())
+                                        .getServiceData(data.getName()).getServiceDeployedTime();
                         if (!application.getDeployedTime().equalsIgnoreCase(tempDeployedTime)) {
-                            new APIUtil().updateApi(dataService.getName(), application.getUserName(), application.getTenantDomain(), data, application.getVersion());
+                            new APIUtil().updateApi(dataService.getName(), application.getUserName(), data,
+                                                    application.getVersion());
                             Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
                             jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
                             application.setDeployedTime(tempDeployedTime);

@@ -40,6 +40,7 @@ import org.wso2.carbon.dssapi.observer.DataHolder;
 import org.wso2.carbon.service.mgt.ServiceAdmin;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -64,7 +65,7 @@ public class APIUtil {
      * To get the API provider
      *
      * @param username username of the logged user
-     * @return
+     * @return APIProvider object according to user
      */
     private APIProvider getAPIProvider(String username) {
         try {
@@ -83,20 +84,13 @@ public class APIUtil {
      *
      * @param serviceId  service name of the service
      * @param username   username of the logged user
-     * @param tenantName tenant of the logged user
      * @param data       data service object
      * @param version    version of the api
      */
-    public void addApi(String serviceId, String username, String tenantName, Data data, String version) {
+    public void addApi(String serviceId, String username, Data data, String version) {
         APIProvider apiProvider;
-        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
             apiProvider = getAPIProvider(username);
-
-
-        } else {
-            apiProvider = getAPIProvider(username + "@" + tenantName);
-        }
-        API api = createApiObject(serviceId, username, tenantName, data, version, apiProvider);
+        API api = createApiObject(serviceId, username, data, version, apiProvider);
 
         if (api != null) {
 
@@ -117,11 +111,13 @@ public class APIUtil {
                 DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
             }
             try {
-                String deployedTime = new ServiceAdmin(DataHolder.getConfigurationContext().getAxisConfiguration()).getServiceData(serviceId).getServiceDeployedTime();
+                String deployedTime = new ServiceAdmin(DataHolder.getConfigurationContext().getAxisConfiguration())
+                        .getServiceData(serviceId).getServiceDeployedTime();
                 String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
                 File file = new File(applicationXmlPath);
                 if (!file.exists()) {
-                    Application application = new Application(true, deployedTime, username, version, tenantName);
+                    Application application = new Application(true, deployedTime, username, version,
+                                                              MultitenantUtils.getTenantDomain(username));
                     JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
                     Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
                     jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
@@ -131,7 +127,8 @@ public class APIUtil {
                     }
                 }
             } catch (FileNotFoundException e) {
-                log.error("couldn't found path :" + DSSRepositoryPath + " application xml file for " + serviceId + "Service", e);
+                log.error("couldn't found path :" + DSSRepositoryPath + " application xml file for " + serviceId +
+                          "Service", e);
             } catch (XMLStreamException e) {
                 log.error("couldn't write application xml file for " + serviceId + "Service", e);
             } catch (Exception e) {
@@ -153,7 +150,8 @@ public class APIUtil {
      * @param data        data service object
      * @return API model
      */
-    private API createAPIModel(APIProvider apiProvider, String apiContext, String apiEndpoint, String authType, APIIdentifier identifier, Data data) {
+    private API createAPIModel(APIProvider apiProvider, String apiContext, String apiEndpoint, String authType,
+                               APIIdentifier identifier, Data data) {
         API api = null;
         try {
             api = new API(identifier);
@@ -167,10 +165,12 @@ public class APIUtil {
             api.setSubscriptionAvailability(APIConstants.SUBSCRIPTION_TO_ALL_TENANTS);
             api.setResponseCache(APIConstants.DISABLED);
             api.setImplementation("endpoint");
-            String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint + "\",\"config\":null},\"endpoint_type\":\"http\"}";
+            String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint +
+                                    "\",\"config\":null},\"endpoint_type\":\"http\"}";
             api.setEndpointConfig(endpointConfig);
             if (log.isDebugEnabled()) {
-                log.debug("API Object Created for API:" + identifier.getApiName() + "version:" + identifier.getVersion());
+                log.debug(
+                        "API Object Created for API:" + identifier.getApiName() + "version:" + identifier.getVersion());
             }
         } catch (APIManagementException e) {
             log.error("couldn't get tiers for provider:" + identifier.getProviderName(), e);
@@ -309,20 +309,13 @@ public class APIUtil {
      *
      * @param serviceId    service name of the service
      * @param username     username of the logged user
-     * @param tenantDomain tenant domain
      * @return availability of the API
      */
-    public long getApiSubscriptions(String serviceId, String username, String tenantDomain, String version) {
+    public long getApiSubscriptions(String serviceId, String username,String version) {
         long subscriptionCount = 0;
-        APIProvider apiProvider;
-        String provider;
-        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-            provider = username;
-            apiProvider = getAPIProvider(username);
-        } else {
-            provider = username + "-AT-" + tenantDomain;
-            apiProvider = getAPIProvider(username + "@" + tenantDomain);
-        }
+        APIProvider apiProvider = getAPIProvider(username);
+        String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
+
         String apiVersion = version;
         String apiName = serviceId;
 
@@ -340,21 +333,13 @@ public class APIUtil {
      *
      * @param serviceId    service name of the service
      * @param username     username of the logged user
-     * @param tenantDomain tenant domain
      * @param version      version of the api
      */
-    public boolean removeApi(String serviceId, String username, String tenantDomain, String version) {
+    public boolean removeApi(String serviceId, String username, String version) {
         boolean status = false;
-        APIProvider apiProvider;
-        String provider;
+        APIProvider apiProvider = getAPIProvider(username);
+        String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil .replaceEmailDomain(username);
 
-        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-            provider = username;
-            apiProvider = getAPIProvider(username);
-        } else {
-            provider = username + "-AT-" + tenantDomain;
-            apiProvider = getAPIProvider(username + "@" + tenantDomain);
-        }
         String apiVersion = version;
 
         String apiName = serviceId;
@@ -390,24 +375,20 @@ public class APIUtil {
      *
      * @param serviceId    service name of the service
      * @param username     username of the logged user
-     * @param tenantDomain tenant domain
      * @return api list according to the given parameters
      */
-    public List<API> getApi(String serviceId, String username, String tenantDomain) {
+    public List<API> getApi(String serviceId, String username ) {
         String version = null;
-        String providerName;
         List<API> apiList = null;
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         APIProvider apiProvider;
         String DSSRepositoryPath;
+        String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
+        apiProvider = getAPIProvider(provider);
         if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
-            providerName = username;
             DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
-            apiProvider = getAPIProvider(username);
         } else {
-            providerName = username + "-AT-" + tenantDomain;
             DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
-            apiProvider = getAPIProvider(username + "@" + tenantDomain);
         }
         try {
             String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
@@ -419,7 +400,7 @@ public class APIUtil {
                 version = application.getVersion();
             }
             apiList = new ArrayList<API>();
-            apiList.add(apiProvider.getAPI(new APIIdentifier(providerName, serviceId, version)));
+            apiList.add(apiProvider.getAPI(new APIIdentifier(provider, serviceId, version)));
         } catch (APIManagementException e) {
             log.error("couldn't find api for Service:" + serviceId, e);
         } catch (JAXBException e) {
@@ -433,17 +414,12 @@ public class APIUtil {
      *
      * @param serviceId  service name of the service
      * @param username   username of the logged user
-     * @param tenantName tenant of the logged user
      * @param version    version of the api
      */
-    public void updateApi(String serviceId, String username, String tenantName, Data data, String version) {
-        APIProvider apiProvider;
-        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
-            apiProvider = getAPIProvider(username + "@");
-        } else {
-            apiProvider = getAPIProvider(username + "@" + tenantName);
-        }
-        API api = createApiObject(serviceId, username, tenantName, data, version, apiProvider);
+    public void updateApi(String serviceId, String username, Data data, String version) {
+        APIProvider apiProvider = getAPIProvider(username);
+
+        API api = createApiObject(serviceId, username, data, version, apiProvider);
         if (api != null) {
             try {
                 apiProvider.changeAPIStatus(api, APIStatus.PROTOTYPED, username, false);
@@ -464,21 +440,14 @@ public class APIUtil {
      *
      * @param serviceId  service name of the service
      * @param username   username of the logged user
-     * @param tenantName tenant of the logged user
      * @param version    version of the api
      */
-    public LifeCycleEventDao[] getLifeCycleEventList(String serviceId, String username, String tenantName, String version) {
-        APIProvider apiProvider;
+    public LifeCycleEventDao[] getLifeCycleEventList(String serviceId, String username, String version) {
+        APIProvider apiProvider = getAPIProvider(username);
         List<LifeCycleEvent> lifeCycleEventList;
         List<LifeCycleEventDao> lifeCycleEventDaoList = new ArrayList<LifeCycleEventDao>();
-        String provider;
-        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
-            apiProvider = getAPIProvider(username);
-            provider = username;
-        } else {
-            provider = username + "-AT-" + tenantName;
-            apiProvider = getAPIProvider(username + "@" + tenantName);
-        }
+        String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
+
         APIIdentifier apiIdentifier = new APIIdentifier(provider, serviceId, version);
         if (apiIdentifier != null) {
             try {
@@ -487,14 +456,17 @@ public class APIUtil {
 
                     for (LifeCycleEvent lifeCycleEvent : lifeCycleEventList) {
                         LifeCycleEventDao lifeCycleEventDao;
-                        // SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
-                        //SimpleDateFormat sdf = new SimpleDateFormat("EE MMM dd HH:mm:ss z yyyy", Locale.ENGLISH);
-                        //SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd ',' hh:mm:ss a");
-
                         if ((lifeCycleEvent.getOldStatus() != null)) {
-                            lifeCycleEventDao = new LifeCycleEventDao(apiIdentifier, lifeCycleEvent.getOldStatus().name(), lifeCycleEvent.getNewStatus().name(), lifeCycleEvent.getUserId(), lifeCycleEvent.getDate().toString());
+                            lifeCycleEventDao =
+                                    new LifeCycleEventDao(apiIdentifier, lifeCycleEvent.getOldStatus().name(),
+                                                          lifeCycleEvent.getNewStatus().name(),
+                                                          lifeCycleEvent.getUserId(),
+                                                          lifeCycleEvent.getDate().toString());
                         } else
-                            lifeCycleEventDao = new LifeCycleEventDao(apiIdentifier, "", lifeCycleEvent.getNewStatus().name(), lifeCycleEvent.getUserId(), lifeCycleEvent.getDate().toString());
+                            lifeCycleEventDao =
+                                    new LifeCycleEventDao(apiIdentifier, "", lifeCycleEvent.getNewStatus().name(),
+                                                          lifeCycleEvent.getUserId(),
+                                                          lifeCycleEvent.getDate().toString());
                         lifeCycleEventDaoList.add(lifeCycleEventDao);
                     }
                 }
@@ -510,28 +482,28 @@ public class APIUtil {
      *
      * @param serviceId   service name of the service
      * @param username    username of the logged user
-     * @param tenantName  tenant of the logged user
      * @param data        data service object
      * @param version     version of the api
      * @param apiProvider API Provider
      * @return created api model
      */
-    private API createApiObject(String serviceId, String username, String tenantName, Data data, String version, APIProvider apiProvider) {
-        String providerName;
+    private API createApiObject(String serviceId, String username, Data data, String version, APIProvider apiProvider) {
         String apiEndpoint;
         String apiContext;
-
-        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantName)) {
-            providerName = username;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" + serviceId + "?wsdl";
+        String tenantDomain = MultitenantUtils.getTenantDomain(username);
+        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+            apiEndpoint =
+                    "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" +
+                    serviceId + "?wsdl";
             apiContext = "/api/" + serviceId;
         } else {
-            providerName = username + "-AT-" + tenantName;
-            apiEndpoint = "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" + tenantName + "/" + serviceId + "?wsdl";
-            apiContext = "/t/" + tenantName + "/api/" + serviceId;
+            apiEndpoint =
+                    "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" +
+                    tenantDomain + "/" + serviceId + "?wsdl";
+            apiContext = "/t/" + tenantDomain + "/api/" + serviceId;
         }
 
-        String provider = providerName;
+        String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
         String apiVersion;
         apiVersion = version;
         String apiName = serviceId;
@@ -615,7 +587,9 @@ public class APIUtil {
         for (String resource : resources) {
             JSONObject resourcesObject = new JSONObject();
             resourcesObject.put("apiVersion", api.getId().getVersion());
-            resourcesObject.put("basePath", "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + api.getContext() + api.getId().getVersion());
+            resourcesObject.put("basePath",
+                                "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) +
+                                api.getContext() + api.getId().getVersion());
             resourcesObject.put("swaggerVersion", "1.2");
             resourcesObject.put("resourcePath", resource);
             resourcesObject.put("apis", resourceMap.get(resource));
@@ -633,6 +607,7 @@ public class APIUtil {
     private void addApiArray(URITemplate template, List<WithParam> withParams) {
         String tempKey = template.getUriTemplate();
         String key = tempKey.replaceAll("[/][{]\\w+[}]", "");
+
         if (resourceMap.containsKey(key)) {
             JSONArray APIArray = resourceMap.get(key);
             if (APIArray != null) {
@@ -681,7 +656,8 @@ public class APIUtil {
      * @param operationObject JSONObject of the Operation in Swagger12
      */
     private void createOperationObject(List<WithParam> withParams, URITemplate template, JSONObject operationObject) {
-        operationObject.put("nickname", template.getHTTPVerb().toLowerCase() + "_" + template.getUriTemplate().replaceFirst("/", ""));
+        operationObject.put("nickname", template.getHTTPVerb().toLowerCase() + "_" +
+                                        template.getUriTemplate().replaceFirst("/", ""));
         operationObject.put("method", template.getHTTPVerb().toUpperCase());
         JSONArray parametersArray = new JSONArray();
         String pathParam = null;

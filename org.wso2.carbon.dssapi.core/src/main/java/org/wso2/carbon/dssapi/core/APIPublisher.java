@@ -30,10 +30,13 @@ import org.wso2.carbon.dataservices.core.admin.DataServiceAdmin;
 import org.wso2.carbon.dataservices.ui.beans.Data;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.util.APIUtil;
-
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,12 +69,13 @@ public class APIPublisher {
      */
     public long viewSubscriptions(String serviceName, String version) {
 
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        String username =
+                MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
+
         if (log.isDebugEnabled()) {
             log.debug("check subscriptions for the API:" + serviceName + "and version:" + version);
         }
-        return new APIUtil().getApiSubscriptions(serviceName, username, tenantDomain, version);
+        return new APIUtil().getApiSubscriptions(serviceName, username, version);
     }
 
     /**
@@ -81,13 +85,15 @@ public class APIPublisher {
      * @return List of Api according to DataService
      */
     public org.wso2.carbon.dssapi.model.API[] listApi(String serviceName) {
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        List<API> apiList = new APIUtil().getApi(serviceName, username, tenantDomain);
+        String username =
+                MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
+        List<API> apiList = new APIUtil().getApi(serviceName, username);
         List<org.wso2.carbon.dssapi.model.API> listApi = new ArrayList<org.wso2.carbon.dssapi.model.API>();
         if (!apiList.isEmpty()) {
             for (API api : apiList) {
-                org.wso2.carbon.dssapi.model.API tempApi = new org.wso2.carbon.dssapi.model.API(api.getId().getApiName(), api.getId().getVersion(), api.getLastUpdated(), api.getStatus().getStatus());
+                org.wso2.carbon.dssapi.model.API tempApi =
+                        new org.wso2.carbon.dssapi.model.API(api.getId().getApiName(), api.getId().getVersion(),
+                                                             api.getLastUpdated(), api.getStatus().getStatus());
                 listApi.add(tempApi);
             }
         }
@@ -105,12 +111,12 @@ public class APIPublisher {
      * @return List of LifeCycles according to the api.
      */
     public LifeCycleEventDao[] listLifeCycleEvents(String serviceName, String version) {
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        String username =
+                MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
         if (log.isDebugEnabled()) {
             log.debug("list life cycle history for API name:" + serviceName + "& version:" + version);
         }
-        return new APIUtil().getLifeCycleEventList(serviceName, username, tenantDomain, version);
+        return new APIUtil().getLifeCycleEventList(serviceName, username, version);
     }
 
     /**
@@ -124,14 +130,15 @@ public class APIPublisher {
         boolean Status = false;
         try {
             serviceContents = new DataServiceAdmin().getDataServiceContentAsString(serviceId);
-            InputStream ins = new ByteArrayInputStream(serviceContents.getBytes());
-            OMElement configElement = (new StAXOMBuilder(ins)).getDocumentElement();
+            XMLStreamReader reader = XMLInputFactory.newInstance().createXMLStreamReader(
+                    new StringReader(serviceContents));
+            OMElement configElement = (new StAXOMBuilder(reader)).getDocumentElement();
             configElement.build();
             Data data = new Data();
             data.populate(configElement);
-            String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-            new APIUtil().addApi(serviceId, username, tenantDomain, data, version);
+	        String username =
+			        MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
+	        new APIUtil().addApi(serviceId, username,data, version);
             Status = true;
             if (log.isDebugEnabled()) {
                 log.debug("api created for Service Name:" + serviceId + "and for version:" + version);
@@ -152,11 +159,11 @@ public class APIPublisher {
      * @return api is removed from api manager
      */
     public boolean removeApi(String serviceId, String version) throws DSSAPIException {
-        boolean Status = false;
+        boolean Status;
 
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        Status = new APIUtil().removeApi(serviceId, username, tenantDomain, version);
+	    String username = MultitenantUtils.getTenantAwareUsername(
+			    CarbonContext.getThreadLocalCarbonContext().getUsername());
+	    Status = new APIUtil().removeApi(serviceId, username, version);
         if (log.isDebugEnabled()) {
             log.debug("api for Service:" + serviceId + "on version:" + version + " successfully removed");
         }
@@ -181,9 +188,9 @@ public class APIPublisher {
             configElement.build();
             Data data = new Data();
             data.populate(configElement);
-            String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-            new APIUtil().updateApi(serviceId, username, tenantDomain, data, version);
+	        String username = MultitenantUtils.getTenantAwareUsername(
+			        CarbonContext.getThreadLocalCarbonContext().getUsername());
+	        new APIUtil().updateApi(serviceId, username,data, version);
             Status = true;
             if (log.isDebugEnabled()) {
                 log.debug("api for Service:" + serviceId + "on version:" + version + " successfully updated");

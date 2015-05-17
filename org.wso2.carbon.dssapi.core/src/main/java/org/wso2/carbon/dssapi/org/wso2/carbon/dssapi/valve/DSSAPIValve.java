@@ -66,12 +66,10 @@ import java.util.regex.Pattern;
 public class DSSAPIValve extends APIManagerInterceptorValve {
 
     private static final Log log = LogFactory.getLog(DSSAPIValve.class);
-    //Cache contextCache = null;
 
     APITokenAuthenticator authenticator;
 
     public DSSAPIValve() {
-        //contextCache = APIUtil.getAPIContextCache();
         authenticator = new APITokenAuthenticator();
 
     }
@@ -131,15 +129,6 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
             try {
                 if (bearerToken != null) {
                     accessToken = APIManagetInterceptorUtils.getBearerToken(bearerToken);
-                } else {
-                    // There can be some API published with None Auth Type
-                    /*
-					 * throw new
-					 * APIFaultException(APIConstants.KeyValidationStatus
-					 * .API_AUTH_INVALID_CREDENTIALS,
-					 * "Invalid format for Authorization header. Expected 'Bearer <token>'"
-					 * );
-					 */
                 }
 
                 String apiVersion = null;
@@ -296,8 +285,6 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
      * When we do GET call for WSDL/WADL, we do not want to
      * authenticate/throttle the request.
      * <p/>
-     * TODO check logic
-     *
      * @param request
      * @param response
      * @param compositeValve
@@ -306,7 +293,6 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
     private void handleWSDLGetRequest(Request request, Response response,
                                       CompositeValve compositeValve, String context) {
         if (request.getMethod().equals(Constants.Configuration.HTTP_METHOD_GET)) {
-            // TODO:Need to get these paths from a config file.
             if (request.getRequestURI().matches(context + "/[^/]*/services")) {
                 getNext().invoke(request, response, compositeValve);
                 return;
