@@ -19,11 +19,7 @@
 
 package org.wso2.carbon.dssapi.util;
 
-import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
-import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
-import org.apache.axis2.description.AxisService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.simple.JSONArray;
@@ -33,17 +29,13 @@ import org.json.simple.parser.ParseException;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.model.*;
-import org.wso2.carbon.apimgt.api.model.API;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
 import org.wso2.carbon.context.CarbonContext;
-import org.wso2.carbon.dataservices.common.DBConstants;
-import org.wso2.carbon.dataservices.core.DBUtils;
-import org.wso2.carbon.dataservices.core.engine.DataService;
 import org.wso2.carbon.dataservices.ui.beans.*;
 import org.wso2.carbon.dssapi.core.DSSAPIException;
-import org.wso2.carbon.dssapi.model.*;
 import org.wso2.carbon.dssapi.model.Application;
+import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.observer.DataHolder;
 import org.wso2.carbon.service.mgt.ServiceAdmin;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -54,12 +46,8 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
-import javax.xml.stream.XMLStreamWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -114,10 +102,10 @@ public class APIUtil {
 
             try {
                 apiProvider.addAPI(api);
-                updateSwagger12Definition(api,apiProvider);
+                updateSwagger12Definition(api, apiProvider);
                 api.setStatus(APIStatus.CREATED);
-                apiProvider.changeAPIStatus(api,APIStatus.PUBLISHED,username,false);
-            }  catch (APIManagementException e) {
+                apiProvider.changeAPIStatus(api, APIStatus.PUBLISHED, username, false);
+            } catch (APIManagementException e) {
                 log.error("couldn't Create API for " + serviceId + "Service", e);
             }
             String DSSRepositoryPath;
@@ -129,17 +117,17 @@ public class APIUtil {
                 DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
             }
             try {
-                String deployedTime=new ServiceAdmin(DataHolder.getConfigurationContext().getAxisConfiguration()).getServiceData(serviceId).getServiceDeployedTime();
+                String deployedTime = new ServiceAdmin(DataHolder.getConfigurationContext().getAxisConfiguration()).getServiceData(serviceId).getServiceDeployedTime();
                 String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
                 File file = new File(applicationXmlPath);
                 if (!file.exists()) {
-                    Application application= new Application(true,deployedTime,username,version,tenantName);
+                    Application application = new Application(true, deployedTime, username, version, tenantName);
                     JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
                     Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
                     jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
                     jaxbMarshaller.marshal(application, file);
-                      if (log.isDebugEnabled()) {
-                        log.debug("API created successfully for " + serviceId );
+                    if (log.isDebugEnabled()) {
+                        log.debug("API created successfully for " + serviceId);
                     }
                 }
             } catch (FileNotFoundException e) {
@@ -147,7 +135,7 @@ public class APIUtil {
             } catch (XMLStreamException e) {
                 log.error("couldn't write application xml file for " + serviceId + "Service", e);
             } catch (Exception e) {
-                log.error("Couldn't get ServiceMetaData Object for the service "+serviceId,e);
+                log.error("Couldn't get ServiceMetaData Object for the service " + serviceId, e);
             }
 
 
@@ -179,7 +167,7 @@ public class APIUtil {
             api.setSubscriptionAvailability(APIConstants.SUBSCRIPTION_TO_ALL_TENANTS);
             api.setResponseCache(APIConstants.DISABLED);
             api.setImplementation("endpoint");
-            String endpointConfig = "{\"production_endpoints\":{\"url\":\""+apiEndpoint+"\",\"config\":null},\"endpoint_type\":\"http\"}";
+            String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint + "\",\"config\":null},\"endpoint_type\":\"http\"}";
             api.setEndpointConfig(endpointConfig);
             if (log.isDebugEnabled()) {
                 log.debug("API Object Created for API:" + identifier.getApiName() + "version:" + identifier.getVersion());
@@ -308,10 +296,10 @@ public class APIUtil {
                 JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
                 Unmarshaller jaxbUnMarshaller = jaxbContext.createUnmarshaller();
                 Application application = (Application) jaxbUnMarshaller.unmarshal(file);
-                checkApiAvailability=application.getManagedApi();
+                checkApiAvailability = application.getManagedApi();
             }
         } catch (JAXBException e) {
-          log.error("Couldn't parse xml file",e);
+            log.error("Couldn't parse xml file", e);
         }
         return checkApiAvailability;
     }
@@ -428,14 +416,14 @@ public class APIUtil {
                 JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
                 Unmarshaller jaxbUnMarshaller = jaxbContext.createUnmarshaller();
                 Application application = (Application) jaxbUnMarshaller.unmarshal(file);
-                version=application.getVersion();
+                version = application.getVersion();
             }
             apiList = new ArrayList<API>();
             apiList.add(apiProvider.getAPI(new APIIdentifier(providerName, serviceId, version)));
         } catch (APIManagementException e) {
             log.error("couldn't find api for Service:" + serviceId, e);
         } catch (JAXBException e) {
-            log.error("Couldn't parse xml file",e);
+            log.error("Couldn't parse xml file", e);
         }
         return apiList;
     }
@@ -458,12 +446,12 @@ public class APIUtil {
         API api = createApiObject(serviceId, username, tenantName, data, version, apiProvider);
         if (api != null) {
             try {
-                apiProvider.changeAPIStatus(api,APIStatus.PROTOTYPED,username,false);
+                apiProvider.changeAPIStatus(api, APIStatus.PROTOTYPED, username, false);
                 apiProvider.updateAPI(api);
                 api.setStatus(APIStatus.PROTOTYPED);
-                updateSwagger12Definition(api,apiProvider);
-                apiProvider.changeAPIStatus(api,APIStatus.PUBLISHED,username,false);
-                } catch (APIManagementException e) {
+                updateSwagger12Definition(api, apiProvider);
+                apiProvider.changeAPIStatus(api, APIStatus.PUBLISHED, username, false);
+            } catch (APIManagementException e) {
                 log.error("error while updating api:" + serviceId + "for version:" + version, e);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -588,23 +576,23 @@ public class APIUtil {
     private void createApis(API api) throws ParseException {
         Set<String> resourceMap = new LinkedHashSet<String>();
         JSONArray jsonArray = new JSONArray();
-        Set<URITemplate> uriTemplateSet=api.getUriTemplates();
-        Set<URITemplate> tempUriTemplates=new HashSet<URITemplate>();
-        for (URITemplate uriTemplate:uriTemplateSet){
+        Set<URITemplate> uriTemplateSet = api.getUriTemplates();
+        Set<URITemplate> tempUriTemplates = new HashSet<URITemplate>();
+        for (URITemplate uriTemplate : uriTemplateSet) {
             String uriTemplateString = uriTemplate.getUriTemplate();
             if (Pattern.compile("[/][{]\\w+[}]").matcher(uriTemplateString).find()) {
-                String  tempUriTemplate=uriTemplateString.replaceAll("[/][{]\\w+[}]", "");
+                String tempUriTemplate = uriTemplateString.replaceAll("[/][{]\\w+[}]", "");
                 resourceMap.add(tempUriTemplate);
 
                 uriTemplate.setUriTemplate(uriTemplateString.replaceFirst("[/][{]\\w+[}]", "/*"));
                 tempUriTemplates.add(uriTemplate);
-            }else{
+            } else {
                 resourceMap.add(uriTemplateString);
                 tempUriTemplates.add(uriTemplate);
             }
         }
         api.setUriTemplates(tempUriTemplates);
-        for (String resource:resourceMap){
+        for (String resource : resourceMap) {
             jsonArray.add(new JSONParser().parse("{\n" +
                     "            \"description\":\"\",\n" +
                     "            \"path\":\"" + resource + "\"\n" +
@@ -624,7 +612,7 @@ public class APIUtil {
     private void createAPIResources(API api) {
         JSONArray resourcesArray = new JSONArray();
         Set<String> resources = resourceMap.keySet();
-        for (String resource:resources) {
+        for (String resource : resources) {
             JSONObject resourcesObject = new JSONObject();
             resourcesObject.put("apiVersion", api.getId().getVersion());
             resourcesObject.put("basePath", "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + api.getContext() + api.getId().getVersion());
@@ -644,7 +632,7 @@ public class APIUtil {
      */
     private void addApiArray(URITemplate template, List<WithParam> withParams) {
         String tempKey = template.getUriTemplate();
-        String key=tempKey.replaceAll("[/][{]\\w+[}]", "");
+        String key = tempKey.replaceAll("[/][{]\\w+[}]", "");
         if (resourceMap.containsKey(key)) {
             JSONArray APIArray = resourceMap.get(key);
             if (APIArray != null) {
@@ -697,14 +685,14 @@ public class APIUtil {
         operationObject.put("method", template.getHTTPVerb().toUpperCase());
         JSONArray parametersArray = new JSONArray();
         String pathParam = null;
-        Matcher paramNamePattern=Pattern.compile("[{]\\w+[}]").matcher(template.getUriTemplate());
+        Matcher paramNamePattern = Pattern.compile("[{]\\w+[}]").matcher(template.getUriTemplate());
         try {
-            if(paramNamePattern.find()){
-                pathParam=paramNamePattern.group().replace("{","");
-                pathParam=pathParam.replace("}","");
+            if (paramNamePattern.find()) {
+                pathParam = paramNamePattern.group().replace("{", "");
+                pathParam = pathParam.replace("}", "");
                 parametersArray.add(new JSONParser().parse("{\n" +
                         "                           \"description\":\"Request Body\",\n" +
-                        "                           \"name\":\"" + pathParam  + "\",\n" +
+                        "                           \"name\":\"" + pathParam + "\",\n" +
                         "                           \"allowMultiple\":false,\n" +
                         "                           \"required\":true,\n" +
                         "                           \"type\":\"string\",\n" +
@@ -712,7 +700,7 @@ public class APIUtil {
                         "                        }"));
             }
             for (WithParam param : withParams) {
-                if(!param.getName().equals(pathParam)){
+                if (!param.getName().equals(pathParam)) {
                     if ("GET".equals(template.getHTTPVerb().toUpperCase())) {
 
                         parametersArray.add(new JSONParser().parse("{\n" +
@@ -749,11 +737,12 @@ public class APIUtil {
 
     /**
      * To Update Swagger12 definition according to api
-     * @param api api Object
+     *
+     * @param api         api Object
      * @param apiProvider API Provider
      * @throws APIManagementException
      */
-    public void updateSwagger12Definition(API api,APIProvider apiProvider) throws APIManagementException {
+    public void updateSwagger12Definition(API api, APIProvider apiProvider) throws APIManagementException {
         try {
             createApiDocInfo(api.getId());
             createApis(api);
@@ -773,8 +762,9 @@ public class APIUtil {
 
     /**
      * This method is used to handle exceptions
+     *
      * @param errorMessage error
-     * @param e throwable error
+     * @param e            throwable error
      * @throws DSSAPIException
      */
 
