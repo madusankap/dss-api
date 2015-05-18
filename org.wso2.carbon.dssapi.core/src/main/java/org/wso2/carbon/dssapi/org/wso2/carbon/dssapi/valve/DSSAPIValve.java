@@ -63,6 +63,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @SuppressWarnings("unchecked")
+/**
+ * DSS API Valve
+ */
 public class DSSAPIValve extends APIManagerInterceptorValve {
 
     private static final Log log = LogFactory.getLog(DSSAPIValve.class);
@@ -268,8 +271,7 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
             log.error("Couldn't Serialize Output", e);
         } catch (IOException e) {
             log.error("Couldn't read the input stream", e);
-        }
-        finally {
+        } finally {
             try {
                 bufferedReader.close();
             } catch (IOException e) {

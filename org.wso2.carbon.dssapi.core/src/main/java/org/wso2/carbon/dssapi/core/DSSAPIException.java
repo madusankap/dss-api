@@ -14,9 +14,13 @@
 * limitations under the License.
 */
 
+
 package org.wso2.carbon.dssapi.core;
 
-
+@SuppressWarnings("unused")
+/**
+ * This is a custom exception class for dss api
+ */
 public class DSSAPIException extends Exception {
 
     public DSSAPIException(String msg) {

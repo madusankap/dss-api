@@ -18,6 +18,9 @@ package org.wso2.carbon.dssapi.observer;
 
 import org.apache.axis2.context.ConfigurationContext;
 
+/**
+ * Data holder class set and get configuration context
+ */
 public class DataHolder {
     private static ConfigurationContext configurationContext;
 

@@ -44,6 +44,10 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
 
+/**
+ * API Observer class
+ */
+
 public class APIObserver implements AxisObserver {
     private static final Log log = LogFactory.getLog(APIObserver.class);
 
