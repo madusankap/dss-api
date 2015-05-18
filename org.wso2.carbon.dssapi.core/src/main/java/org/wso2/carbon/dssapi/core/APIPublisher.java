@@ -127,7 +127,7 @@ public class APIPublisher {
      */
     public boolean addApi(String serviceId, String version) throws DSSAPIException {
         String serviceContents;
-        boolean Status = false;
+        boolean status = false;
         try {
             serviceContents = new DataServiceAdmin().getDataServiceContentAsString(serviceId);
             XMLStreamReader reader = XMLInputFactory.newInstance().createXMLStreamReader(
@@ -139,7 +139,7 @@ public class APIPublisher {
 	        String username =
 			        MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
 	        new APIUtil().addApi(serviceId, username,data, version);
-            Status = true;
+            status = true;
             if (log.isDebugEnabled()) {
                 log.debug("api created for Service Name:" + serviceId + "and for version:" + version);
             }
@@ -148,7 +148,7 @@ public class APIPublisher {
         } catch (XMLStreamException e) {
             APIUtil.handleException("Couldn't create api for Service: " + serviceId, e);
         }
-        return Status;
+        return status;
     }
 
     /**
@@ -159,16 +159,16 @@ public class APIPublisher {
      * @return api is removed from api manager
      */
     public boolean removeApi(String serviceId, String version) throws DSSAPIException {
-        boolean Status;
+        boolean status;
 
 	    String username = MultitenantUtils.getTenantAwareUsername(
-			    CarbonContext.getThreadLocalCarbonContext().getUsername());
-	    Status = new APIUtil().removeApi(serviceId, username, version);
+                CarbonContext.getThreadLocalCarbonContext().getUsername());
+	    status = new APIUtil().removeApi(serviceId, username, version);
         if (log.isDebugEnabled()) {
             log.debug("api for Service:" + serviceId + "on version:" + version + " successfully removed");
         }
 
-        return Status;
+        return status;
     }
 
 
@@ -180,7 +180,7 @@ public class APIPublisher {
      */
     public boolean updateApi(String serviceId, String version) throws DSSAPIException{
         String serviceContents;
-        boolean Status = false;
+        boolean status = false;
         try {
             serviceContents = new DataServiceAdmin().getDataServiceContentAsString(serviceId);
             InputStream ins = new ByteArrayInputStream(serviceContents.getBytes());
@@ -189,9 +189,9 @@ public class APIPublisher {
             Data data = new Data();
             data.populate(configElement);
 	        String username = MultitenantUtils.getTenantAwareUsername(
-			        CarbonContext.getThreadLocalCarbonContext().getUsername());
+                    CarbonContext.getThreadLocalCarbonContext().getUsername());
 	        new APIUtil().updateApi(serviceId, username,data, version);
-            Status = true;
+            status = true;
             if (log.isDebugEnabled()) {
                 log.debug("api for Service:" + serviceId + "on version:" + version + " successfully updated");
             }
@@ -200,6 +200,6 @@ public class APIPublisher {
         } catch (XMLStreamException e) {
             APIUtil.handleException("Couldn't update api for Service: " + serviceId, e);
         }
-        return Status;
+        return status;
     }
 }

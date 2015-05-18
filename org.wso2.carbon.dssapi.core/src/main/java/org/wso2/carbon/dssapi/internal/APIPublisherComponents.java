@@ -33,41 +33,41 @@ import org.wso2.carbon.utils.ConfigurationContextService;
 import java.util.ArrayList;
 
 /**
-
  * @scr.component name="org.wso2.carbon.dssapi.internal" immediate="true"
-
  * @scr.reference name="config.context.service" interface="org.wso2.carbon.utils.ConfigurationContextService"
-
+ * <p/>
  * cardinality="1..1" policy="dynamic" bind="setConfigurationContextService" unbind="unsetConfigurationContextService"
  */
 public class APIPublisherComponents {
-    private ConfigurationContext cfgCtx;
+    private ConfigurationContext configurationContext;
     private static final Log log = LogFactory.getLog(APIObserver.class);
-    protected void activate(ComponentContext ctxt) throws Exception {
-         if(ctxt!=null){
-            AxisConfiguration axisConfig = cfgCtx.getAxisConfiguration();
-            APIObserver apiObserver=new APIObserver();
+
+    protected void activate(ComponentContext context) throws Exception {
+        if (context != null) {
+            AxisConfiguration axisConfig = configurationContext.getAxisConfiguration();
+            APIObserver apiObserver = new APIObserver();
             apiObserver.init(axisConfig);
-           axisConfig.addObservers(apiObserver);
-             APIPublisherConfigurator apiPublisherConfigurator =new APIPublisherConfigurator();
-             ctxt.getBundleContext()
-                 .registerService(Axis2ConfigurationContextObserver.class.getName(), apiPublisherConfigurator, null);
-             ArrayList<CarbonTomcatValve> valves = new ArrayList<CarbonTomcatValve>();
-             valves.add(new DSSAPIValve());
-             TomcatValveContainer.addValves(valves);
-         }
+            axisConfig.addObservers(apiObserver);
+            APIPublisherConfigurator apiPublisherConfigurator = new APIPublisherConfigurator();
+            context.getBundleContext()
+                    .registerService(Axis2ConfigurationContextObserver.class.getName(), apiPublisherConfigurator, null);
+            ArrayList<CarbonTomcatValve> valves = new ArrayList<CarbonTomcatValve>();
+            valves.add(new DSSAPIValve());
+            TomcatValveContainer.addValves(valves);
+        }
     }
+
     protected void setConfigurationContextService(ConfigurationContextService cfgCtxService) {
         if (log.isDebugEnabled()) {
             log.debug("ConfigurationContextService bound to DSSAPI component");
         }
-        cfgCtx = cfgCtxService.getServerConfigContext();
+        configurationContext = cfgCtxService.getServerConfigContext();
     }
 
     protected void unsetConfigurationContextService(ConfigurationContextService cfgCtxService) {
         if (log.isDebugEnabled()) {
             log.debug("ConfigurationContextService unbound from the DSSAPI Component");
         }
-        cfgCtx = null;
+        configurationContext = null;
     }
 }
