@@ -26,21 +26,23 @@ import org.wso2.carbon.dssapi.observer.APIObserver;
 import org.wso2.carbon.dssapi.observer.DataHolder;
 import org.wso2.carbon.utils.AbstractAxis2ConfigurationContextObserver;
 
-
+/**
+ * This class is used to configure api publisher components
+ */
 public class APIPublisherConfigurator extends AbstractAxis2ConfigurationContextObserver {
     private static final Log log = LogFactory.getLog(APIPublisherConfigurator.class);
 
     @Override
     public void createdConfigurationContext(ConfigurationContext configContext) {
-        APIObserver apiObserver=new APIObserver();
+        APIObserver apiObserver = new APIObserver();
         apiObserver.init(configContext.getAxisConfiguration());
         configContext.getAxisConfiguration().addObservers(apiObserver);
         DataHolder.setConfigurationContext(configContext);
-            }
+    }
 
     @Override
     public void terminatedConfigurationContext(ConfigurationContext configCtx) {
-        log.info("Configuration Context for Tenant: "+ TenantAxisUtils.getTenantId(configCtx)+ "terminated.....");
+        log.info("Configuration Context for Tenant: " + TenantAxisUtils.getTenantId(configCtx) + "terminated.....");
         DataHolder.unSetConfigurationContext(null);
     }
 }

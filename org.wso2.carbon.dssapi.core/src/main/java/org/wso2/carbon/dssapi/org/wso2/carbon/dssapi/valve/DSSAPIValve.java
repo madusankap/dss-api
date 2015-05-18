@@ -63,6 +63,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @SuppressWarnings("unchecked")
+/**
+ * DSS API Valve
+ */
 public class DSSAPIValve extends APIManagerInterceptorValve {
 
     private static final Log log = LogFactory.getLog(DSSAPIValve.class);
@@ -189,6 +192,7 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
         } else {
             resourceName = temp;
         }
+        BufferedReader bufferedReader = null;
 
         try {
             AxisService axisService = configurationContext.getService(serviceName);
@@ -204,8 +208,8 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
                     paramValueMap.put(requestKey, new ParamValue(request.getParameter(requestKey)));
                 }
             } else {
-                BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
-                String data = br.readLine();
+                bufferedReader = new BufferedReader(new InputStreamReader(request.getInputStream()));
+                String data = bufferedReader.readLine();
                 if (data != null) {
                     String[] formParameters = data.split("&");
                     for (String nameValue : formParameters) {
@@ -266,7 +270,13 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
         } catch (XMLStreamException e) {
             log.error("Couldn't Serialize Output", e);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Couldn't read the input stream", e);
+        } finally {
+            try {
+                bufferedReader.close();
+            } catch (IOException e) {
+                log.error("Error occurred while trying to close buffered reader", e);
+            }
         }
 
         //Handle Responses

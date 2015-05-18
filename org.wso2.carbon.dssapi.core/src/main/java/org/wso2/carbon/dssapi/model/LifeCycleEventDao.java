@@ -19,8 +19,13 @@
 package org.wso2.carbon.dssapi.model;
 
 import org.wso2.carbon.apimgt.api.model.APIIdentifier;
+
 import java.io.Serializable;
 
+@SuppressWarnings("unused")
+/**
+ * Model class for life cycle events
+ */
 public class LifeCycleEventDao implements Serializable {
     private APIIdentifier api;
     private String oldStatus;

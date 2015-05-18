@@ -43,6 +43,7 @@ import java.util.List;
 /**
  * To handle the API operations
  */
+@SuppressWarnings("unused")
 public class APIPublisher {
     private static final Log log = LogFactory.getLog(APIPublisher.class);
 

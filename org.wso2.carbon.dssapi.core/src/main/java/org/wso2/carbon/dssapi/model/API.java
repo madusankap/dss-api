@@ -21,6 +21,10 @@ package org.wso2.carbon.dssapi.model;
 import java.io.Serializable;
 import java.util.Date;
 
+@SuppressWarnings("unused")
+/**
+ * Model class for API
+ */
 public class API implements Serializable {
     private String apiName;
     private String apiVersion;
