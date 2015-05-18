@@ -184,8 +184,9 @@ public class APIPublisher {
         boolean status = false;
         try {
             serviceContents = new DataServiceAdmin().getDataServiceContentAsString(serviceId);
-            InputStream ins = new ByteArrayInputStream(serviceContents.getBytes());
-            OMElement configElement = (new StAXOMBuilder(ins)).getDocumentElement();
+            XMLStreamReader reader = XMLInputFactory.newInstance().createXMLStreamReader(
+                    new StringReader(serviceContents));
+            OMElement configElement = (new StAXOMBuilder(reader)).getDocumentElement();
             configElement.build();
             Data data = new Data();
             data.populate(configElement);

@@ -39,9 +39,12 @@ import org.wso2.carbon.service.mgt.ServiceAdmin;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 
 /**
@@ -72,11 +75,13 @@ public class APIObserver implements AxisObserver {
 
                         JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
                         Unmarshaller jaxbUnMarshaller = jaxbContext.createUnmarshaller();
+                        jaxbUnMarshaller.setProperty("jaxb.encoding", "UTF-8");
                         application = (Application) jaxbUnMarshaller.unmarshal(file);
                         String serviceContents =
                                 new DataServiceAdmin().getDataServiceContentAsString(dataService.getName());
-                        InputStream ins = new ByteArrayInputStream(serviceContents.getBytes());
-                        OMElement configElement = (new StAXOMBuilder(ins)).getDocumentElement();
+                        XMLStreamReader reader = XMLInputFactory.newInstance().createXMLStreamReader(
+                                new StringReader(serviceContents));
+                        OMElement configElement = (new StAXOMBuilder(reader)).getDocumentElement();
                         configElement.build();
                         Data data = new Data();
                         data.populate(configElement);
@@ -88,6 +93,7 @@ public class APIObserver implements AxisObserver {
                                     application.getVersion());
                             Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
                             jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+                            jaxbMarshaller.setProperty(Marshaller.JAXB_ENCODING, "UTF-8");
                             application.setDeployedTime(tempDeployedTime);
                             jaxbMarshaller.marshal(application, file);
                         }
