@@ -42,7 +42,7 @@ public class APIPublisherComponents {
     private ConfigurationContext configurationContext;
     private static final Log log = LogFactory.getLog(APIObserver.class);
 
-    protected void activate(ComponentContext context) throws Exception {
+    protected void activate(ComponentContext context) {
         if (context != null) {
             AxisConfiguration axisConfig = configurationContext.getAxisConfiguration();
             APIObserver apiObserver = new APIObserver();

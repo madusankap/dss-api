@@ -158,7 +158,7 @@ public class APIPublisher {
      * @param version   version of the api want to remove
      * @return api is removed from api manager
      */
-    public boolean removeApi(String serviceId, String version) throws DSSAPIException {
+    public boolean removeApi(String serviceId, String version) {
         boolean status;
 
 	    String username = MultitenantUtils.getTenantAwareUsername(
