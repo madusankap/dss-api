@@ -82,14 +82,14 @@ public class APIUtil {
     /**
      * To add an API
      *
-     * @param serviceId  service name of the service
-     * @param username   username of the logged user
-     * @param data       data service object
-     * @param version    version of the api
+     * @param serviceId service name of the service
+     * @param username  username of the logged user
+     * @param data      data service object
+     * @param version   version of the api
      */
     public void addApi(String serviceId, String username, Data data, String version) {
         APIProvider apiProvider;
-            apiProvider = getAPIProvider(username);
+        apiProvider = getAPIProvider(username);
         API api = createApiObject(serviceId, username, data, version, apiProvider);
 
         if (api != null) {
@@ -117,7 +117,7 @@ public class APIUtil {
                 File file = new File(applicationXmlPath);
                 if (!file.exists()) {
                     Application application = new Application(true, deployedTime, username, version,
-                                                              MultitenantUtils.getTenantDomain(username));
+                            MultitenantUtils.getTenantDomain(username));
                     JAXBContext jaxbContext = JAXBContext.newInstance(Application.class);
                     Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
                     jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
@@ -128,7 +128,7 @@ public class APIUtil {
                 }
             } catch (FileNotFoundException e) {
                 log.error("couldn't found path :" + DSSRepositoryPath + " application xml file for " + serviceId +
-                          "Service", e);
+                        "Service", e);
             } catch (XMLStreamException e) {
                 log.error("couldn't write application xml file for " + serviceId + "Service", e);
             } catch (Exception e) {
@@ -166,7 +166,7 @@ public class APIUtil {
             api.setResponseCache(APIConstants.DISABLED);
             api.setImplementation("endpoint");
             String endpointConfig = "{\"production_endpoints\":{\"url\":\"" + apiEndpoint +
-                                    "\",\"config\":null},\"endpoint_type\":\"http\"}";
+                    "\",\"config\":null},\"endpoint_type\":\"http\"}";
             api.setEndpointConfig(endpointConfig);
             if (log.isDebugEnabled()) {
                 log.debug(
@@ -307,23 +307,20 @@ public class APIUtil {
     /**
      * To make sure that the API having active subscriptions for given service
      *
-     * @param serviceId    service name of the service
-     * @param username     username of the logged user
+     * @param serviceId service name of the service
+     * @param username  username of the logged user
      * @return availability of the API
      */
-    public long getApiSubscriptions(String serviceId, String username,String version) {
+    public long getApiSubscriptions(String serviceId, String username, String version) {
         long subscriptionCount = 0;
         APIProvider apiProvider = getAPIProvider(username);
         String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
 
-        String apiVersion = version;
-        String apiName = serviceId;
-
-        APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
+        APIIdentifier identifier = new APIIdentifier(provider, serviceId, version);
         try {
             subscriptionCount = apiProvider.getAPISubscriptionCountByAPI(identifier);
         } catch (APIManagementException e) {
-            log.error("error getting subscription count for API:" + apiName + "for version:" + version, e);
+            log.error("error getting subscription count for API:" + serviceId + "for version:" + version, e);
         }
         return subscriptionCount;
     }
@@ -331,20 +328,16 @@ public class APIUtil {
     /**
      * To remove API availability form a given user in the given tenant domain
      *
-     * @param serviceId    service name of the service
-     * @param username     username of the logged user
-     * @param version      version of the api
+     * @param serviceId service name of the service
+     * @param username  username of the logged user
+     * @param version   version of the api
      */
     public boolean removeApi(String serviceId, String username, String version) {
         boolean status = false;
         APIProvider apiProvider = getAPIProvider(username);
-        String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil .replaceEmailDomain(username);
+        String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
 
-        String apiVersion = version;
-
-        String apiName = serviceId;
-
-        APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
+        APIIdentifier identifier = new APIIdentifier(provider, serviceId, version);
         try {
             if (apiProvider.checkIfAPIExists(identifier)) {
                 apiProvider.deleteAPI(identifier);
@@ -365,7 +358,7 @@ public class APIUtil {
                 }
             }
         } catch (APIManagementException e) {
-            log.error("couldn't remove API" + apiName + "version:" + version, e);
+            log.error("couldn't remove API" + serviceId + "version:" + version, e);
         }
         return status;
     }
@@ -373,11 +366,11 @@ public class APIUtil {
     /**
      * To get the list of APIs
      *
-     * @param serviceId    service name of the service
-     * @param username     username of the logged user
+     * @param serviceId service name of the service
+     * @param username  username of the logged user
      * @return api list according to the given parameters
      */
-    public List<API> getApi(String serviceId, String username ) {
+    public List<API> getApi(String serviceId, String username) {
         String version = null;
         List<API> apiList = null;
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -412,9 +405,9 @@ public class APIUtil {
     /**
      * To update an API
      *
-     * @param serviceId  service name of the service
-     * @param username   username of the logged user
-     * @param version    version of the api
+     * @param serviceId service name of the service
+     * @param username  username of the logged user
+     * @param version   version of the api
      */
     public void updateApi(String serviceId, String username, Data data, String version) {
         APIProvider apiProvider = getAPIProvider(username);
@@ -438,9 +431,9 @@ public class APIUtil {
     /**
      * To update an API
      *
-     * @param serviceId  service name of the service
-     * @param username   username of the logged user
-     * @param version    version of the api
+     * @param serviceId service name of the service
+     * @param username  username of the logged user
+     * @param version   version of the api
      */
     public LifeCycleEventDao[] getLifeCycleEventList(String serviceId, String username, String version) {
         APIProvider apiProvider = getAPIProvider(username);
@@ -459,14 +452,14 @@ public class APIUtil {
                         if ((lifeCycleEvent.getOldStatus() != null)) {
                             lifeCycleEventDao =
                                     new LifeCycleEventDao(apiIdentifier, lifeCycleEvent.getOldStatus().name(),
-                                                          lifeCycleEvent.getNewStatus().name(),
-                                                          lifeCycleEvent.getUserId(),
-                                                          lifeCycleEvent.getDate().toString());
+                                            lifeCycleEvent.getNewStatus().name(),
+                                            lifeCycleEvent.getUserId(),
+                                            lifeCycleEvent.getDate().toString());
                         } else
                             lifeCycleEventDao =
                                     new LifeCycleEventDao(apiIdentifier, "", lifeCycleEvent.getNewStatus().name(),
-                                                          lifeCycleEvent.getUserId(),
-                                                          lifeCycleEvent.getDate().toString());
+                                            lifeCycleEvent.getUserId(),
+                                            lifeCycleEvent.getDate().toString());
                         lifeCycleEventDaoList.add(lifeCycleEventDao);
                     }
                 }
@@ -494,12 +487,12 @@ public class APIUtil {
         if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
             apiEndpoint =
                     "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/" +
-                    serviceId + "?wsdl";
+                            serviceId + "?wsdl";
             apiContext = "/api/" + serviceId;
         } else {
             apiEndpoint =
                     "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) + "/services/t/" +
-                    tenantDomain + "/" + serviceId + "?wsdl";
+                            tenantDomain + "/" + serviceId + "?wsdl";
             apiContext = "/t/" + tenantDomain + "/api/" + serviceId;
         }
 
@@ -588,8 +581,8 @@ public class APIUtil {
             JSONObject resourcesObject = new JSONObject();
             resourcesObject.put("apiVersion", api.getId().getVersion());
             resourcesObject.put("basePath",
-                                "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) +
-                                api.getContext() + api.getId().getVersion());
+                    "http://" + System.getProperty(HOST_NAME) + ":" + System.getProperty(HTTP_PORT) +
+                            api.getContext() + api.getId().getVersion());
             resourcesObject.put("swaggerVersion", "1.2");
             resourcesObject.put("resourcePath", resource);
             resourcesObject.put("apis", resourceMap.get(resource));
@@ -657,7 +650,7 @@ public class APIUtil {
      */
     private void createOperationObject(List<WithParam> withParams, URITemplate template, JSONObject operationObject) {
         operationObject.put("nickname", template.getHTTPVerb().toLowerCase() + "_" +
-                                        template.getUriTemplate().replaceFirst("/", ""));
+                template.getUriTemplate().replaceFirst("/", ""));
         operationObject.put("method", template.getHTTPVerb().toUpperCase());
         JSONArray parametersArray = new JSONArray();
         String pathParam = null;

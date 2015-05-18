@@ -81,7 +81,7 @@ public class APIObserver implements AxisObserver {
                                         .getServiceData(data.getName()).getServiceDeployedTime();
                         if (!application.getDeployedTime().equalsIgnoreCase(tempDeployedTime)) {
                             new APIUtil().updateApi(dataService.getName(), application.getUserName(), data,
-                                                    application.getVersion());
+                                    application.getVersion());
                             Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
                             jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
                             application.setDeployedTime(tempDeployedTime);

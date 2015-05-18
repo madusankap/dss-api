@@ -33,7 +33,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * API publisher client to talk to stub
+ * API publisher client to work with the stub
  */
 public class APIPublisherClient {
 
