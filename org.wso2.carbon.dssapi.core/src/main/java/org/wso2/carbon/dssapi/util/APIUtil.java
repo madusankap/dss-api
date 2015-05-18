@@ -53,6 +53,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@SuppressWarnings("unchecked")
 public class APIUtil {
     private static final String HTTP_PORT = "mgt.transport.http.port";
     private static final String HOST_NAME = "carbon.local.ip";
@@ -442,31 +443,31 @@ public class APIUtil {
         String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
 
         APIIdentifier apiIdentifier = new APIIdentifier(provider, serviceId, version);
-        if (apiIdentifier != null) {
-            try {
-                lifeCycleEventList = apiProvider.getLifeCycleEvents(apiIdentifier);
-                if (lifeCycleEventList.size() > 0) {
 
-                    for (LifeCycleEvent lifeCycleEvent : lifeCycleEventList) {
-                        LifeCycleEventDao lifeCycleEventDao;
-                        if ((lifeCycleEvent.getOldStatus() != null)) {
-                            lifeCycleEventDao =
-                                    new LifeCycleEventDao(apiIdentifier, lifeCycleEvent.getOldStatus().name(),
-                                            lifeCycleEvent.getNewStatus().name(),
-                                            lifeCycleEvent.getUserId(),
-                                            lifeCycleEvent.getDate().toString());
-                        } else
-                            lifeCycleEventDao =
-                                    new LifeCycleEventDao(apiIdentifier, "", lifeCycleEvent.getNewStatus().name(),
-                                            lifeCycleEvent.getUserId(),
-                                            lifeCycleEvent.getDate().toString());
-                        lifeCycleEventDaoList.add(lifeCycleEventDao);
-                    }
+        try {
+            lifeCycleEventList = apiProvider.getLifeCycleEvents(apiIdentifier);
+            if (lifeCycleEventList.size() > 0) {
+
+                for (LifeCycleEvent lifeCycleEvent : lifeCycleEventList) {
+                    LifeCycleEventDao lifeCycleEventDao;
+                    if ((lifeCycleEvent.getOldStatus() != null)) {
+                        lifeCycleEventDao =
+                                new LifeCycleEventDao(apiIdentifier, lifeCycleEvent.getOldStatus().name(),
+                                        lifeCycleEvent.getNewStatus().name(),
+                                        lifeCycleEvent.getUserId(),
+                                        lifeCycleEvent.getDate().toString());
+                    } else
+                        lifeCycleEventDao =
+                                new LifeCycleEventDao(apiIdentifier, "", lifeCycleEvent.getNewStatus().name(),
+                                        lifeCycleEvent.getUserId(),
+                                        lifeCycleEvent.getDate().toString());
+                    lifeCycleEventDaoList.add(lifeCycleEventDao);
                 }
-            } catch (APIManagementException e) {
-                log.error("error while getting lifecycle history api:" + serviceId + "for version:" + version, e);
             }
+        } catch (APIManagementException e) {
+            log.error("error while getting lifecycle history api:" + serviceId + "for version:" + version, e);
         }
+
         return lifeCycleEventDaoList.toArray(new LifeCycleEventDao[lifeCycleEventDaoList.size()]);
     }
 
@@ -499,6 +500,7 @@ public class APIUtil {
         String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
         String apiVersion;
         apiVersion = version;
+        //noinspection UnnecessaryLocalVariable
         String apiName = serviceId;
         String authType = "Any";
         APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);

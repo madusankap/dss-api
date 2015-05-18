@@ -34,7 +34,7 @@
                 <td>
                     <textarea id="dsConfig" name="dsConfig"
                               style="background-color:lavender; width:99%;height:70px;*height:500px;
-                      font-family:verdana;
+                      font-family:verdana,serif;
                       font-size:15px;
                       color: red;
                       border:solid 1px #9fc2d5;

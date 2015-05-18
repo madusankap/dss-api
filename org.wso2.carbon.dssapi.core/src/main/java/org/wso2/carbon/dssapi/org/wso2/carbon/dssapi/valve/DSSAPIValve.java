@@ -58,11 +58,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@SuppressWarnings("unchecked")
 public class DSSAPIValve extends APIManagerInterceptorValve {
 
     private static final Log log = LogFactory.getLog(DSSAPIValve.class);
@@ -79,7 +79,7 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
         context1 = context1.substring(0, context1.lastIndexOf(")"));
         String context = null;
         String tenantDomain = MultitenantUtils.getTenantDomain(request);
-        AxisConfiguration configurationContext = null;
+        AxisConfiguration configurationContext;
         if (!MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(tenantDomain)) {
             configurationContext =
                     TenantAxisUtils.getTenantAxisConfiguration(tenantDomain, DataHolder.getServerConfigContext());
@@ -116,67 +116,66 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
         long requestTime = System.currentTimeMillis();
         APIManagerInterceptorOps interceptorOps = new APIManagerInterceptorOps();
         UsageStatConfiguration statConfiguration = new UsageStatConfiguration();
-        if (contextExist) {
-            //Use embedded API Management
-            if (log.isDebugEnabled()) {
-                log.debug("API Manager Interceptor Valve Got invoked!!");
-            }
 
-            String bearerToken = request.getHeader(APIConstants.OperationParameter.AUTH_PARAM_NAME);
-            String accessToken = null;
+        //Use embedded API Management
+        if (log.isDebugEnabled()) {
+            log.debug("API Manager Interceptor Valve Got invoked!!");
+        }
+
+        String bearerToken = request.getHeader(APIConstants.OperationParameter.AUTH_PARAM_NAME);
+        String accessToken = null;
 
             /* Authenticate*/
-            try {
-                if (bearerToken != null) {
-                    accessToken = APIManagetInterceptorUtils.getBearerToken(bearerToken);
-                }
+        try {
+            if (bearerToken != null) {
+                accessToken = APIManagetInterceptorUtils.getBearerToken(bearerToken);
+            }
 
-                String apiVersion = null;
-                Matcher matcher = Pattern.compile("[0-9][.][0-9][.][0-9]").matcher(context1);
-                while (matcher.find()) {
-                    apiVersion = matcher.group();
-                }
-                String domain = request.getHeader(APITokenValidator.getAPIManagerClientDomainHeader());
-                String authLevel = authenticator.getResourceAuthenticationScheme(context,
-                        apiVersion,
+            String apiVersion = null;
+            Matcher matcher = Pattern.compile("[0-9][.][0-9][.][0-9]").matcher(context1);
+            while (matcher.find()) {
+                apiVersion = matcher.group();
+            }
+            String domain = request.getHeader(APITokenValidator.getAPIManagerClientDomainHeader());
+            String authLevel = authenticator.getResourceAuthenticationScheme(context,
+                    apiVersion,
+                    request.getRequestURI(),
+                    request.getMethod());
+            if (authLevel.equals(APIConstants.NO_MATCHING_AUTH_SCHEME)) {
+                APIManagetInterceptorUtils.handleNoMatchAuthSchemeCallForRestService(response,
+                        request.getMethod(),
                         request.getRequestURI(),
-                        request.getMethod());
-                if (authLevel == APIConstants.NO_MATCHING_AUTH_SCHEME) {
-                    APIManagetInterceptorUtils.handleNoMatchAuthSchemeCallForRestService(response,
-                            request.getMethod(),
-                            request.getRequestURI(),
-                            apiVersion, context);
-                    return;
-                } else {
-                    interceptorOps.doAuthenticate(context, apiVersion, accessToken, authLevel, domain);
-                }
-            } catch (APIManagementException e) {
-                //ignore
-            } catch (APIFaultException e) {/* If !isAuthorized APIFaultException is thrown*/
-                APIManagetInterceptorUtils.handleAPIFaultForRestService(e, APIManagerErrorConstants.API_SECURITY_NS,
-                        APIManagerErrorConstants
-                                .API_SECURITY_NS_PREFIX,
-                        response);
+                        apiVersion, context);
                 return;
+            } else {
+                interceptorOps.doAuthenticate(context, apiVersion, accessToken, authLevel, domain);
             }
+        } catch (APIManagementException e) {
+            //ignore
+        } catch (APIFaultException e) {/* If !isAuthorized APIFaultException is thrown*/
+            APIManagetInterceptorUtils.handleAPIFaultForRestService(e, APIManagerErrorConstants.API_SECURITY_NS,
+                    APIManagerErrorConstants
+                            .API_SECURITY_NS_PREFIX,
+                    response);
+            return;
+        }
             /* Throttle*/
-            try {
-                interceptorOps.doThrottle(request, accessToken);
-            } catch (APIFaultException e) {
-                APIManagetInterceptorUtils.handleAPIFaultForRestService(e,
-                        APIManagerErrorConstants.API_THROTTLE_NS,
-                        APIManagerErrorConstants
-                                .API_THROTTLE_NS_PREFIX,
-                        response);
-                return;
-            }
+        try {
+            interceptorOps.doThrottle(request, accessToken);
+        } catch (APIFaultException e) {
+            APIManagetInterceptorUtils.handleAPIFaultForRestService(e,
+                    APIManagerErrorConstants.API_THROTTLE_NS,
+                    APIManagerErrorConstants
+                            .API_THROTTLE_NS_PREFIX,
+                    response);
+            return;
+        }
             /* Publish Statistic if enabled*/
-            if (statConfiguration.isStatsPublishingEnabled()) {
-                try {
-                    interceptorOps.publishStatistics(request, requestTime, false);
-                } catch (APIManagementException e) {
-                    log.error("Error occured when publishing stats", e);
-                }
+        if (statConfiguration.isStatsPublishingEnabled()) {
+            try {
+                interceptorOps.publishStatistics(request, requestTime, false);
+            } catch (APIManagementException e) {
+                log.error("Error occurred when publishing stats", e);
             }
         }
 
@@ -219,17 +218,17 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
             Resource resource = null;
             if (pathParam != null) {
                 pathParamExist = true;
-                Iterator<Resource.ResourceID> resourceIDIterator = dataService.getResourceIds().iterator();
-                while (resourceIDIterator.hasNext()) {
-                    Resource.ResourceID resourceID = resourceIDIterator.next();
+                for (Resource.ResourceID resourceID : dataService.getResourceIds()) {
                     if (Pattern.matches(resourceName + "/[{]\\w+[}]", resourceID.getPath())) {
                         resource = dataService.getResource(resourceID);
                     }
                 }
-                Matcher paramNamePattern = Pattern.compile("[{]\\w+[}]").matcher(resource.getResourceId().getPath());
-                paramNamePattern.find();
-                String pathParamName = paramNamePattern.group().replace("{", "").replace("}", "");
-                paramValueMap.put(pathParamName, new ParamValue(pathParam));
+                if (resource != null) {
+                    Matcher paramNamePattern = Pattern.compile("[{]\\w+[}]").matcher(resource.getResourceId().getPath());
+                    paramNamePattern.find();
+                    String pathParamName = paramNamePattern.group().replace("{", "").replace("}", "");
+                    paramValueMap.put(pathParamName, new ParamValue(pathParam));
+                }
             } else {
                 resource = dataService.getResource(new Resource.ResourceID(resourceName, request.getMethod()));
 
@@ -286,10 +285,10 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
      * authenticate/throttle the request.
      * <p/>
      *
-     * @param request
-     * @param response
-     * @param compositeValve
-     * @param context
+     * @param request        wsdl get request
+     * @param response       response
+     * @param compositeValve value
+     * @param context        context
      */
     private void handleWSDLGetRequest(Request request, Response response,
                                       CompositeValve compositeValve, String context) {
@@ -299,7 +298,7 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
                 return;
             }
             Enumeration<String> params = request.getParameterNames();
-            String paramName = null;
+            String paramName;
             while (params.hasMoreElements()) {
                 paramName = params.nextElement();
                 if (paramName.endsWith("wsdl") || paramName.endsWith("wadl")) {

@@ -44,7 +44,7 @@
     }
 %>
 <fmt:bundle basename="org.wso2.carbon.dssapi.ui.i18n.Resources">
-    <table class="styledLeft" id="apiOperationsTable" style="margin-left: 0px; margin-top :15px" width="100%">
+    <table class="styledLeft" id="apiOperationsTable" style="margin-left: 0; margin-top :15px" width="100%">
         <thead>
         <tr>
             <th colspan="2" align="left"><fmt:message key="api.management"/></th>
@@ -102,13 +102,13 @@
                         String user = lifeCycleEventDao.getUserId();
                 %>
                 <div style="padding-top: 5px; margin-left: -3px">
-                    <span style="background-image: url('../api-ui/images/info.png'); background-repeat: no-repeat;background-size: 18px 16px;padding-left: 18px">
+                    <span style="background: url('../api-ui/images/info.png') no-repeat;background-size: 18px 16px;padding-left: 18px">
                         <%=
                             dateFormat.format(parseFormat.parse(lifeCycleEventDao.getDate()))
                         %>
                     </span>
-                    <span style="background-image: url('../api-ui/images/user.png');background-repeat: no-repeat;background-size: 16px 16px;padding-left: 18px"><a
-                            href="../..//publisher/user?uname=<%=user%>"><%=user%>
+                    <span style="background: url('../api-ui/images/user.png') no-repeat;background-size: 16px 16px;padding-left: 18px"><a
+                            href="../../publisher/user?uname=<%=user%>"><%=user%>
                     </a></span>
                     <%
                         if (lifeCycleEventDao.getOldStatus() != "") {

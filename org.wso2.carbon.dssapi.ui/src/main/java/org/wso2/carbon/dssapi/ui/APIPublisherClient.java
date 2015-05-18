@@ -40,8 +40,8 @@ public class APIPublisherClient {
     //private static Log log = LogFactory.getLog(APIPublisherClient.class);
     APIPublisherStub stub;
 
-    public APIPublisherClient(String cookie, String url, ConfigurationContext configContext) throws AxisFault {
-        String serviceEndpoint = "";
+    public APIPublisherClient(String cookie, String url, ConfigurationContext configContext) {
+        String serviceEndpoint;
 
         serviceEndpoint = url + "APIPublisher";
         stub = new APIPublisherStub(configContext, serviceEndpoint);
@@ -54,9 +54,8 @@ public class APIPublisherClient {
     /**
      * @param serviceName name of the service
      * @return api availability
-     * @throws RemoteException
      */
-    public boolean checkApiAvailability(String serviceName) throws RemoteException {
+    public boolean checkApiAvailability(String serviceName) {
         return stub.checkApiAvailability(serviceName);
     }
 
@@ -66,9 +65,8 @@ public class APIPublisherClient {
      *
      * @param serviceName name of the service
      * @return status of the operation
-     * @throws RemoteException
      */
-    public boolean publishAPI(String serviceName, String version) throws RemoteException {
+    public boolean publishAPI(String serviceName, String version) {
         return stub.addApi(serviceName, version);
     }
 
@@ -78,9 +76,8 @@ public class APIPublisherClient {
      * @param serviceName name of the service
      * @param version     version of the service
      * @return status of the operation
-     * @throws RemoteException
      */
-    public boolean unpublishAPI(String serviceName, String version) throws RemoteException {
+    public boolean unpublishAPI(String serviceName, String version) {
         return stub.removeApi(serviceName, version);
     }
 
@@ -89,9 +86,8 @@ public class APIPublisherClient {
      *
      * @param serviceName name of the service
      * @return number of subscriptions
-     * @throws RemoteException
      */
-    public long checkNumberOfSubscriptions(String serviceName, String version) throws RemoteException {
+    public long checkNumberOfSubscriptions(String serviceName, String version) {
         return stub.viewSubscriptions(serviceName, version);
 
     }
@@ -101,9 +97,8 @@ public class APIPublisherClient {
      *
      * @param serviceName name of the service
      * @return the current API version
-     * @throws RemoteException
      */
-    public String getCurrentApiVersion(String serviceName) throws RemoteException {
+    public String getCurrentApiVersion(String serviceName) {
         API[] apiArray = stub.listApi(serviceName);
         return apiArray[apiArray.length - 1].getApiVersion();
     }
@@ -114,9 +109,8 @@ public class APIPublisherClient {
      * @param serviceName  name of the service
      * @param version     version of the api
      * @return formatted published date
-     * @throws RemoteException
      */
-    public String getPublishedDate(String serviceName, String version) throws RemoteException, ParseException {
+    public String getPublishedDate(String serviceName, String version) throws ParseException {
         LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
         SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd',' hh:mm:ss");
@@ -137,9 +131,9 @@ public class APIPublisherClient {
      * @param serviceName name of the service
      * @param version     version of the api
      * @return formatted updated date
-     * @throws RemoteException
+     * @throws ParseException
      */
-    public String getUpdatedDate(String serviceName, String version) throws RemoteException, ParseException {
+    public String getUpdatedDate(String serviceName, String version) throws ParseException {
         LifeCycleEventDao[] cycleEventDaos = stub.listLifeCycleEvents(serviceName, version);
         SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd',' hh:mm:ss");
@@ -162,9 +156,8 @@ public class APIPublisherClient {
      * @param serviceName name of the service
      * @param version     version of the api
      * @return api life cycle history
-     * @throws RemoteException
      */
-    public LifeCycleEventDao[] getLifeCycleEvents(String serviceName, String version) throws RemoteException {
+    public LifeCycleEventDao[] getLifeCycleEvents(String serviceName, String version) {
         return stub.listLifeCycleEvents(serviceName, version);
     }
 
@@ -174,9 +167,8 @@ public class APIPublisherClient {
      * @param serviceName name of the service
      * @param version     version of the api
      * @return the status of the operation
-     * @throws RemoteException
      */
-    public boolean updateApi(String serviceName, String version) throws RemoteException {
+    public boolean updateApi(String serviceName, String version) {
         return stub.updateApi(serviceName, version);
     }
 }
