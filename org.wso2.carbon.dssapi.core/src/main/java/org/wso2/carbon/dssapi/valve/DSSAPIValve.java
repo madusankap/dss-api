@@ -16,7 +16,7 @@
  *  under the License.
  *
  */
-package org.wso2.carbon.dssapi.org.wso2.carbon.dssapi.valve;
+package org.wso2.carbon.dssapi.valve;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.AxisFault;
