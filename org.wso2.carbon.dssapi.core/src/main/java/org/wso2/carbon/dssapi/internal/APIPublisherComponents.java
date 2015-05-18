@@ -24,7 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.ComponentContext;
 import org.wso2.carbon.dssapi.observer.APIObserver;
-import org.wso2.carbon.dssapi.org.wso2.carbon.dssapi.valve.DSSAPIValve;
+import org.wso2.carbon.dssapi.valve.DSSAPIValve;
 import org.wso2.carbon.tomcat.ext.valves.CarbonTomcatValve;
 import org.wso2.carbon.tomcat.ext.valves.TomcatValveContainer;
 import org.wso2.carbon.utils.Axis2ConfigurationContextObserver;
