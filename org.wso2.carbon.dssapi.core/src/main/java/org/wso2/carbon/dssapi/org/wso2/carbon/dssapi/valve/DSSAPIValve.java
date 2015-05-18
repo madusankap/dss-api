@@ -62,10 +62,11 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@SuppressWarnings("unchecked")
+
 /**
  * DSS API Valve
  */
+@SuppressWarnings("unchecked")
 public class DSSAPIValve extends APIManagerInterceptorValve {
 
     private static final Log log = LogFactory.getLog(DSSAPIValve.class);
