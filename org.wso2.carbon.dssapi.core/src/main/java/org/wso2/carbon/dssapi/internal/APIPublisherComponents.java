@@ -38,10 +38,11 @@ import java.util.ArrayList;
  * <p/>
  * cardinality="1..1" policy="dynamic" bind="setConfigurationContextService" unbind="unsetConfigurationContextService"
  */
-@SuppressWarnings("unused")
+
 /**
  * bundle activator
  */
+@SuppressWarnings("unused")
 public class APIPublisherComponents {
     private ConfigurationContext configurationContext;
     private static final Log log = LogFactory.getLog(APIObserver.class);

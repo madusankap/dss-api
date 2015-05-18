@@ -21,11 +21,11 @@ package org.wso2.carbon.dssapi.model;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement(name = "api")
-@SuppressWarnings("unused")
 /**
  * Model class for Application
  */
+@XmlRootElement(name = "api")
+@SuppressWarnings("unused")
 public class Application {
     private boolean managedApi;
     private String version;
