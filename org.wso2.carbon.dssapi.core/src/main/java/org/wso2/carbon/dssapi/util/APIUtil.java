@@ -193,7 +193,6 @@ public class APIUtil {
      * @return URI templates
      */
     private Set<URITemplate> getURITemplates(String endpoint, String authType, Data data, Set<Tier> tiers) {
-        //todo improve to add sub context paths for uri templates as well
         Set<URITemplate> uriTemplates = new LinkedHashSet<URITemplate>();
         ArrayList<Operation> operations = data.getOperations();
         ArrayList<Resource> resourceList = data.getResources();
