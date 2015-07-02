@@ -156,8 +156,13 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
                 interceptorOps.doAuthenticate(context, apiVersion, accessToken, authLevel, domain);
             }
         } catch (APIManagementException e) {
-            //ignore
-            //todo:handle api management Exception
+            String payLoad = "<ams:fault xmlns:ams=\"http://wso2.org/apimanager/security\">\n" +
+                             "  <ams:code>900902</ams:code>\n" +
+                             "  <ams:message> Invocation Failure </ams:message>\n" +
+                             "  <ams:description>" + e.getMessage() + " \"Authorization: Bearer " +
+                             "ACCESS_TOKEN\"</ams:description>\n" +
+                             "</ams:fault>";
+            APIManagetInterceptorUtils.handleRestFailure(response, payLoad);
         } catch (APIFaultException e) {/* If !isAuthorized APIFaultException is thrown*/
             APIManagetInterceptorUtils.handleAPIFaultForRestService(e, APIManagerErrorConstants.API_SECURITY_NS,
                     APIManagerErrorConstants
