@@ -25,6 +25,7 @@ import org.apache.axis2.description.AxisService;
 import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.APIManagementException;
@@ -71,7 +72,7 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
 
     private static final Log log = LogFactory.getLog(DSSAPIValve.class);
 
-    APITokenAuthenticator authenticator;
+    private APITokenAuthenticator authenticator;
 
     public DSSAPIValve() {
         authenticator = new APITokenAuthenticator();
@@ -94,7 +95,7 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
             context = context1.split("/[0-9][.][0-9][.][0-9]")[0];
         }
 
-        if (context == null || context.equals("")) {
+        if (context.isEmpty()) {
             //Invoke next valve in pipe.
             getNext().invoke(request, response, compositeValve);
             return;
@@ -156,6 +157,7 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
             }
         } catch (APIManagementException e) {
             //ignore
+            //todo:handle api management Exception
         } catch (APIFaultException e) {/* If !isAuthorized APIFaultException is thrown*/
             APIManagetInterceptorUtils.handleAPIFaultForRestService(e, APIManagerErrorConstants.API_SECURITY_NS,
                     APIManagerErrorConstants
@@ -273,11 +275,7 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
         } catch (IOException e) {
             log.error("Couldn't read the input stream", e);
         } finally {
-            try {
-                bufferedReader.close();
-            } catch (IOException e) {
-                log.error("Error occurred while trying to close buffered reader", e);
-            }
+            IOUtils.closeQuietly(bufferedReader);
         }
 
         //Handle Responses
@@ -285,7 +283,7 @@ public class DSSAPIValve extends APIManagerInterceptorValve {
             try {
                 interceptorOps.publishStatistics(request, requestTime, true);
             } catch (APIManagementException e) {
-                log.error("Error occured when publishing stats", e);
+                log.error("Error occurred when publishing stats", e);
             }
         }
 

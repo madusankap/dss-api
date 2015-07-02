@@ -19,24 +19,17 @@
 
 package org.wso2.carbon.dssapi.core;
 
-import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axis2.AxisFault;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.model.API;
 import org.wso2.carbon.context.CarbonContext;
-import org.wso2.carbon.dataservices.core.admin.DataServiceAdmin;
 import org.wso2.carbon.dataservices.ui.beans.Data;
 import org.wso2.carbon.dssapi.model.LifeCycleEventDao;
 import org.wso2.carbon.dssapi.util.APIUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
-import javax.xml.stream.XMLInputFactory;
+
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -130,16 +123,10 @@ public class APIPublisher {
         String serviceContents;
         boolean status = false;
         try {
-            serviceContents = new DataServiceAdmin().getDataServiceContentAsString(serviceId);
-            XMLStreamReader reader = XMLInputFactory.newInstance().createXMLStreamReader(
-                    new StringReader(serviceContents));
-            OMElement configElement = (new StAXOMBuilder(reader)).getDocumentElement();
-            configElement.build();
-            Data data = new Data();
-            data.populate(configElement);
-	        String username =
+            Data data = APIUtil.populateDataServiceData(serviceId);
+            String username =
 			        MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
-	        new APIUtil().addApi(serviceId, username,data, version);
+            APIUtil.addApi(serviceId, username, data, version);
             status = true;
             if (log.isDebugEnabled()) {
                 log.debug("api created for Service Name:" + serviceId + "and for version:" + version);
@@ -164,7 +151,7 @@ public class APIPublisher {
 
 	    String username = MultitenantUtils.getTenantAwareUsername(
                 CarbonContext.getThreadLocalCarbonContext().getUsername());
-	    status = new APIUtil().removeApi(serviceId, username, version);
+        status = APIUtil.removeApi(serviceId, username, version);
         if (log.isDebugEnabled()) {
             log.debug("api for Service:" + serviceId + "on version:" + version + " successfully removed");
         }
@@ -183,16 +170,11 @@ public class APIPublisher {
         String serviceContents;
         boolean status = false;
         try {
-            serviceContents = new DataServiceAdmin().getDataServiceContentAsString(serviceId);
-            XMLStreamReader reader = XMLInputFactory.newInstance().createXMLStreamReader(
-                    new StringReader(serviceContents));
-            OMElement configElement = (new StAXOMBuilder(reader)).getDocumentElement();
-            configElement.build();
-            Data data = new Data();
-            data.populate(configElement);
-	        String username = MultitenantUtils.getTenantAwareUsername(
+
+            Data data = APIUtil.populateDataServiceData(serviceId);
+            String username = MultitenantUtils.getTenantAwareUsername(
                     CarbonContext.getThreadLocalCarbonContext().getUsername());
-	        new APIUtil().updateApi(serviceId, username,data, version);
+            APIUtil.updateApi(serviceId, username, data, version);
             status = true;
             if (log.isDebugEnabled()) {
                 log.debug("api for Service:" + serviceId + "on version:" + version + " successfully updated");

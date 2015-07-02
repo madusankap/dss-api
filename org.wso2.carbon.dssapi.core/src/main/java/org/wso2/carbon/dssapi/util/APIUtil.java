@@ -19,6 +19,9 @@
 
 package org.wso2.carbon.dssapi.util;
 
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axis2.AxisFault;
 import org.apache.axis2.Constants;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +35,7 @@ import org.wso2.carbon.apimgt.api.model.*;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.dataservices.core.admin.DataServiceAdmin;
 import org.wso2.carbon.dataservices.ui.beans.*;
 import org.wso2.carbon.dssapi.core.DSSAPIException;
 import org.wso2.carbon.dssapi.model.Application;
@@ -46,9 +50,12 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.StringReader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -62,8 +69,6 @@ public class APIUtil {
     private static final String HTTP_PORT = "mgt.transport.http.port";
     private static final String HOST_NAME = "carbon.local.ip";
     public static final String APPLICATION_XML = "_application.xml";
-    private JSONObject swagger12Json = new JSONObject();
-    private Map<String, JSONArray> resourceMap = new LinkedHashMap<String, JSONArray>();
     private static final Log log = LogFactory.getLog(APIUtil.class);
 
     /**
@@ -72,7 +77,7 @@ public class APIUtil {
      * @param username username of the logged user
      * @return APIProvider object according to user
      */
-    private APIProvider getAPIProvider(String username) {
+    private static APIProvider getAPIProvider(String username) {
         try {
             if (log.isDebugEnabled()) {
                 log.debug("Create APIProvider from username:" + username);
@@ -92,33 +97,34 @@ public class APIUtil {
      * @param data      data service object
      * @param version   version of the api
      */
-    public void addApi(String serviceId, String username, Data data, String version) {
+    public static void addApi(String serviceId, String username, Data data, String version) {
         APIProvider apiProvider;
         apiProvider = getAPIProvider(username);
-        API api = createApiObject(serviceId, username, data, version, apiProvider);
-
+        Map<String, JSONArray> resourceMap = new LinkedHashMap<String, JSONArray>();
+        API api = createApiObject(serviceId, username, data, version, apiProvider, resourceMap);
+        JSONObject swagger12Json = new JSONObject();
         if (api != null) {
 
             try {
                 apiProvider.addAPI(api);
-                updateSwagger12Definition(api, apiProvider);
+                updateSwagger12Definition(api, apiProvider, swagger12Json, resourceMap);
                 api.setStatus(APIStatus.CREATED);
                 apiProvider.changeAPIStatus(api, APIStatus.PUBLISHED, username, false);
             } catch (APIManagementException e) {
                 log.error("couldn't Create API for " + serviceId + "Service", e);
             }
-            String DSSRepositoryPath;
+            String dssRepositoryPath;
             int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
 
             if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
-                DSSRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
+                dssRepositoryPath = CarbonUtils.getCarbonRepository() + "/dataservices";
             } else {
-                DSSRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
+                dssRepositoryPath = CarbonUtils.getCarbonTenantsDirPath() + "/" + tenantId + "/dataservices";
             }
             try {
                 String deployedTime = new ServiceAdmin(DataHolder.getConfigurationContext().getAxisConfiguration())
                         .getServiceData(serviceId).getServiceDeployedTime();
-                String applicationXmlPath = DSSRepositoryPath + "/" + serviceId + APPLICATION_XML;
+                String applicationXmlPath = dssRepositoryPath + "/" + serviceId + APPLICATION_XML;
                 File file = new File(applicationXmlPath);
                 if (!file.exists()) {
                     Application application = new Application(true, deployedTime, username, version,
@@ -132,7 +138,7 @@ public class APIUtil {
                     }
                 }
             } catch (FileNotFoundException e) {
-                log.error("couldn't found path :" + DSSRepositoryPath + " application xml file for " + serviceId +
+                log.error("couldn't found path :" + dssRepositoryPath + " application xml file for " + serviceId +
                         "Service", e);
             } catch (XMLStreamException e) {
                 log.error("couldn't write application xml file for " + serviceId + "Service", e);
@@ -153,15 +159,16 @@ public class APIUtil {
      * @param authType    Authentication type
      * @param identifier  API identifier
      * @param data        data service object
+     * @param resourceMap map of resources in swagger12 json
      * @return API model
      */
-    private API createAPIModel(APIProvider apiProvider, String apiContext, String apiEndpoint, String authType,
-                               APIIdentifier identifier, Data data) {
+    private static API createAPIModel(APIProvider apiProvider, String apiContext, String apiEndpoint, String authType,
+                                      APIIdentifier identifier, Data data, Map<String, JSONArray> resourceMap) {
         API api = null;
         try {
             api = new API(identifier);
             api.setContext(apiContext);
-            api.setUriTemplates(getURITemplates(apiEndpoint, authType, data, apiProvider.getTiers()));
+            api.setUriTemplates(getURITemplates(apiEndpoint, authType, data, apiProvider.getTiers(), resourceMap));
             api.setVisibility(APIConstants.API_GLOBAL_VISIBILITY);
             api.addAvailableTiers(apiProvider.getTiers());
             api.setEndpointSecured(false);
@@ -189,10 +196,12 @@ public class APIUtil {
      * @param endpoint Endpoint URL
      * @param authType Authentication type
      * @param data     data service object
-     * @param tiers
+     * @param tiers tiers according to publisher
+     * @param resourceMap map of resources in swagger12 json
      * @return URI templates
      */
-    private Set<URITemplate> getURITemplates(String endpoint, String authType, Data data, Set<Tier> tiers) {
+    private static Set<URITemplate> getURITemplates(String endpoint, String authType, Data data, Set<Tier> tiers,
+                                                    Map<String, JSONArray> resourceMap) {
         Set<URITemplate> uriTemplates = new LinkedHashSet<URITemplate>();
         ArrayList<Operation> operations = data.getOperations();
         ArrayList<Resource> resourceList = data.getResources();
@@ -207,7 +216,7 @@ public class APIUtil {
                     template.setThrottlingTier(tier.getName());
                 }
                 uriTemplates.add(template);
-                addApiArray(template, resource.getCallQuery().getWithParams());
+                addApiArray(template, resource.getCallQuery().getWithParams(), resourceMap);
             }
             for (Operation operation : operations) {
                 URITemplate template = new URITemplate();
@@ -219,7 +228,7 @@ public class APIUtil {
                     template.setThrottlingTier(tier.getName());
                 }
                 uriTemplates.add(template);
-                addApiArray(template, operation.getCallQuery().getWithParams());
+                addApiArray(template, operation.getCallQuery().getWithParams(), resourceMap);
             }
         } else {
             for (Operation operation : operations) {
@@ -232,7 +241,7 @@ public class APIUtil {
                     template.setThrottlingTier(tier.getName());
                 }
                 uriTemplates.add(template);
-                addApiArray(template, operation.getCallQuery().getWithParams());
+                addApiArray(template, operation.getCallQuery().getWithParams(), resourceMap);
             }
             for (Resource resource : resourceList) {
                 URITemplate template = new URITemplate();
@@ -248,7 +257,7 @@ public class APIUtil {
                     template.setThrottlingTier(tier.getName());
                 }
                 uriTemplates.add(template);
-                addApiArray(template, resource.getCallQuery().getWithParams());
+                addApiArray(template, resource.getCallQuery().getWithParams(), resourceMap);
             }
         }
         return uriTemplates;
@@ -260,7 +269,7 @@ public class APIUtil {
      * @return type of http verb can used to operation
      */
 
-    private String getOperationBasedHttpVerbs(String queryId, Data data) {
+    private static String getOperationBasedHttpVerbs(String queryId, Data data) {
         String httpVerb = "POST";
         if (queryId != null) {
             Query query = data.getQuery(queryId);
@@ -336,7 +345,7 @@ public class APIUtil {
      * @param username  username of the logged user
      * @param version   version of the api
      */
-    public boolean removeApi(String serviceId, String username, String version) {
+    public static boolean removeApi(String serviceId, String username, String version) {
         boolean status = false;
         APIProvider apiProvider = getAPIProvider(username);
         String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
@@ -413,16 +422,17 @@ public class APIUtil {
      * @param username  username of the logged user
      * @param version   version of the api
      */
-    public void updateApi(String serviceId, String username, Data data, String version) {
+    public static void updateApi(String serviceId, String username, Data data, String version) {
         APIProvider apiProvider = getAPIProvider(username);
-
-        API api = createApiObject(serviceId, username, data, version, apiProvider);
+        Map<String, JSONArray> resourceMap = new LinkedHashMap<String, JSONArray>();
+        JSONObject swagger12Json = new JSONObject();
+        API api = createApiObject(serviceId, username, data, version, apiProvider, resourceMap);
         if (api != null) {
             try {
                 apiProvider.changeAPIStatus(api, APIStatus.PROTOTYPED, username, false);
                 apiProvider.updateAPI(api);
                 api.setStatus(APIStatus.PROTOTYPED);
-                updateSwagger12Definition(api, apiProvider);
+                updateSwagger12Definition(api, apiProvider, swagger12Json, resourceMap);
                 apiProvider.changeAPIStatus(api, APIStatus.PUBLISHED, username, false);
             } catch (APIManagementException e) {
                 log.error("error while updating api:" + serviceId + "for version:" + version, e);
@@ -482,9 +492,12 @@ public class APIUtil {
      * @param data        data service object
      * @param version     version of the api
      * @param apiProvider API Provider
+     * @param resourceMap map of resources in swagger12 json
      * @return created api model
      */
-    private API createApiObject(String serviceId, String username, Data data, String version, APIProvider apiProvider) {
+    private static API createApiObject(String serviceId, String username, Data data, String version,
+                                       APIProvider apiProvider,
+                                       Map<String, JSONArray> resourceMap) {
         String apiEndpoint;
         String apiContext;
         String tenantDomain = MultitenantUtils.getTenantDomain(username);
@@ -507,16 +520,17 @@ public class APIUtil {
         String apiName = serviceId;
         String authType = "Any";
         APIIdentifier identifier = new APIIdentifier(provider, apiName, apiVersion);
-        return createAPIModel(apiProvider, apiContext, apiEndpoint, authType, identifier, data);
+        return createAPIModel(apiProvider, apiContext, apiEndpoint, authType, identifier, data, resourceMap);
     }
 
     /**
      * To Create api_doc and info json objects in Swagger12 Json
      *
      * @param apiIdentifier API identifier
+     * @param swagger12Json swagger12 json object
      * @throws ParseException
      */
-    private void createApiDocInfo(APIIdentifier apiIdentifier) throws ParseException {
+    private static void createApiDocInfo(APIIdentifier apiIdentifier, JSONObject swagger12Json) throws ParseException {
         JSONObject api_doc = new JSONObject();
         api_doc.put("apiVersion", apiIdentifier.getVersion());
         api_doc.put("swaggerVersion", "1.2");
@@ -541,9 +555,10 @@ public class APIUtil {
      * To Create apis Json Object in swagger12 Json
      *
      * @param api api Object
+     * @param swagger12Json swagger12 json object
      * @throws ParseException
      */
-    private void createApis(API api) throws ParseException {
+    private static void createApis(API api, JSONObject swagger12Json) throws ParseException {
         Set<String> resourceMap = new LinkedHashSet<String>();
         JSONArray jsonArray = new JSONArray();
         Set<URITemplate> uriTemplateSet = api.getUriTemplates();
@@ -576,10 +591,11 @@ public class APIUtil {
 
     /**
      * To Create API Resources in swagger12 definition
-     *
-     * @param api api Object
+     *  @param api api Object
+     * @param swagger12Json swagger12 json object
+     * @param resourceMap map of resources in swagger12 json
      */
-    private void createAPIResources(API api) {
+    private static void createAPIResources(API api, JSONObject swagger12Json, Map<String, JSONArray> resourceMap) {
         JSONArray resourcesArray = new JSONArray();
         Set<String> resources = resourceMap.keySet();
         for (String resource : resources) {
@@ -598,11 +614,12 @@ public class APIUtil {
 
     /**
      * To Add api according to the Uri Template to Swagger12  Json
-     *
-     * @param template   URITemplate according to path
+     *  @param template   URITemplate according to path
      * @param withParams parameters in Sql Query
+     * @param resourceMap map of resources in swagger12 json
      */
-    private void addApiArray(URITemplate template, List<WithParam> withParams) {
+    private static void addApiArray(URITemplate template, List<WithParam> withParams,
+                                    Map<String, JSONArray> resourceMap) {
         String tempKey = template.getUriTemplate();
         String key = tempKey.replaceAll("[/][{]\\w+[}]", "");
 
@@ -653,7 +670,8 @@ public class APIUtil {
      * @param template        URITemplate according to path
      * @param operationObject JSONObject of the Operation in Swagger12
      */
-    private void createOperationObject(List<WithParam> withParams, URITemplate template, JSONObject operationObject) {
+    private static void createOperationObject(List<WithParam> withParams, URITemplate template,
+                                              JSONObject operationObject) {
         operationObject.put("nickname", template.getHTTPVerb().toLowerCase() + "_" +
                 template.getUriTemplate().replaceFirst("/", ""));
         operationObject.put("method", template.getHTTPVerb().toUpperCase());
@@ -714,13 +732,16 @@ public class APIUtil {
      *
      * @param api         api Object
      * @param apiProvider API Provider
+     * @param swagger12Json swagger12 json object
+     * @param resourceMap map of resources in swagger12 json
      * @throws APIManagementException
      */
-    public void updateSwagger12Definition(API api, APIProvider apiProvider) throws APIManagementException {
+    public static void updateSwagger12Definition(API api, APIProvider apiProvider, JSONObject swagger12Json,
+                                                 Map<String, JSONArray> resourceMap) throws APIManagementException {
         try {
-            createApiDocInfo(api.getId());
-            createApis(api);
-            createAPIResources(api);
+            createApiDocInfo(api.getId(),swagger12Json);
+            createApis(api,swagger12Json);
+            createAPIResources(api, swagger12Json, resourceMap);
             String apiJSON = ((JSONObject) swagger12Json.get("api_doc")).toJSONString();
             apiProvider.updateSwagger12Definition(api.getId(), APIConstants.API_DOC_1_2_RESOURCE_NAME, apiJSON);
             JSONArray resources = (JSONArray) swagger12Json.get("resources");
@@ -745,5 +766,23 @@ public class APIUtil {
     public static void handleException(String errorMessage, Throwable e) throws DSSAPIException {
         log.error(errorMessage, e);
         throw new DSSAPIException(errorMessage, e);
+    }
+
+    /**
+     *
+     * @param serviceId data service Name
+     * @return data object of data service
+     * @throws AxisFault
+     * @throws XMLStreamException
+     */
+    public static Data populateDataServiceData(String serviceId) throws AxisFault, XMLStreamException {
+        String serviceContents = new DataServiceAdmin().getDataServiceContentAsString(serviceId);
+        XMLStreamReader reader = XMLInputFactory.newInstance().createXMLStreamReader(
+                new StringReader(serviceContents));
+        OMElement configElement = (new StAXOMBuilder(reader)).getDocumentElement();
+        configElement.build();
+        Data data = new Data();
+        data.populate(configElement);
+        return data;
     }
 }
