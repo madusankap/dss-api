@@ -37,18 +37,20 @@ import org.wso2.carbon.dssapi.util.APIUtil;
 import org.wso2.carbon.service.mgt.ServiceAdmin;
 
 import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.InputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 
+
 /**
- * API Observer class
+ * Observer class to observe the service updates, parameter changes and other changes in data service
+ * Later the published api will be changed according to the updates
  */
 
 public class APIObserver implements AxisObserver {
@@ -60,7 +62,7 @@ public class APIObserver implements AxisObserver {
     }
 
     @Override
-    public void serviceUpdate(AxisEvent axisEvent, AxisService axisService) {
+    public void serviceUpdate(AxisEvent axisEvent, AxisService axisService){
 
         if (axisEvent.getEventType() == AxisEvent.SERVICE_DEPLOY) {
             DataService dataService =
@@ -90,17 +92,23 @@ public class APIObserver implements AxisObserver {
                                         .getServiceData(data.getName()).getServiceDeployedTime();
                         if (!application.getDeployedTime().equalsIgnoreCase(tempDeployedTime)) {
                             APIUtil.updateApi(dataService.getName(), application.getUserName(), data,
-                                              application.getVersion());
+                                    application.getVersion());
                             Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
                             jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
                             jaxbMarshaller.setProperty(Marshaller.JAXB_ENCODING, "UTF-8");
                             application.setDeployedTime(tempDeployedTime);
                             jaxbMarshaller.marshal(application, file);
                         }
+                    } catch (JAXBException e) {
+                        log.error("An error occurred while reading the data for " + dataService.getName(), e);
+                    } catch (XMLStreamException e) {
+                        log.error("An error occurred while reading xml data for " + dataService.getName(), e);
+                    } catch (AxisFault axisFault) {
+                        log.error("An error occurred while reading the service " + dataService.getName(), axisFault);
                     } catch (Exception e) {
-                        log.error("Couldn't get ServiceMetaData Object for the service" + dataService.getName(), e);
+                        log.error("Couldn't get service meta data for the service " + dataService.getName(), e);
                     }
-
+                    //Logged observed errors and let the process to continue
                 }
 
             }

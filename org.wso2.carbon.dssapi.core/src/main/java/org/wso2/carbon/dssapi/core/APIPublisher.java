@@ -46,7 +46,7 @@ public class APIPublisher {
      * @param serviceName name of the service
      * @return availability of api to DataServices
      */
-    public boolean checkApiAvailability(String serviceName) {
+    public boolean checkApiAvailability(String serviceName) throws DSSAPIException {
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         if (log.isDebugEnabled()) {
             log.debug("check api available for service name:" + serviceName);
@@ -61,7 +61,7 @@ public class APIPublisher {
      * @param version     version of the api
      * @return no of subscriptions to api to that  DataServices
      */
-    public long viewSubscriptions(String serviceName, String version) {
+    public long viewSubscriptions(String serviceName, String version) throws DSSAPIException {
 
         String username =
                 MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
@@ -78,7 +78,7 @@ public class APIPublisher {
      * @param serviceName name of the service
      * @return List of Api according to DataService
      */
-    public org.wso2.carbon.dssapi.model.API[] listApi(String serviceName) {
+    public org.wso2.carbon.dssapi.model.API[] listApi(String serviceName) throws DSSAPIException {
         String username =
                 MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
         List<API> apiList = new APIUtil().getApi(serviceName, username);
@@ -87,7 +87,7 @@ public class APIPublisher {
             for (API api : apiList) {
                 org.wso2.carbon.dssapi.model.API tempApi =
                         new org.wso2.carbon.dssapi.model.API(api.getId().getApiName(), api.getId().getVersion(),
-                                                             api.getLastUpdated(), api.getStatus().getStatus());
+                                api.getLastUpdated(), api.getStatus().getStatus());
                 listApi.add(tempApi);
             }
         }
@@ -104,7 +104,7 @@ public class APIPublisher {
      * @param version     version of the api
      * @return List of LifeCycles according to the api.
      */
-    public LifeCycleEventDao[] listLifeCycleEvents(String serviceName, String version) {
+    public LifeCycleEventDao[] listLifeCycleEvents(String serviceName, String version) throws DSSAPIException {
         String username =
                 MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
         if (log.isDebugEnabled()) {
@@ -125,7 +125,7 @@ public class APIPublisher {
         try {
             Data data = APIUtil.populateDataServiceData(serviceId);
             String username =
-			        MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
+                    MultitenantUtils.getTenantAwareUsername(CarbonContext.getThreadLocalCarbonContext().getUsername());
             APIUtil.addApi(serviceId, username, data, version);
             status = true;
             if (log.isDebugEnabled()) {
@@ -146,10 +146,10 @@ public class APIPublisher {
      * @param version   version of the api want to remove
      * @return api is removed from api manager
      */
-    public boolean removeApi(String serviceId, String version) {
+    public boolean removeApi(String serviceId, String version) throws DSSAPIException {
         boolean status;
 
-	    String username = MultitenantUtils.getTenantAwareUsername(
+        String username = MultitenantUtils.getTenantAwareUsername(
                 CarbonContext.getThreadLocalCarbonContext().getUsername());
         status = APIUtil.removeApi(serviceId, username, version);
         if (log.isDebugEnabled()) {
@@ -166,7 +166,7 @@ public class APIPublisher {
      * @param serviceId service id of the service
      * @param version   version of the api
      */
-    public boolean updateApi(String serviceId, String version) throws DSSAPIException{
+    public boolean updateApi(String serviceId, String version) throws DSSAPIException {
         String serviceContents;
         boolean status = false;
         try {

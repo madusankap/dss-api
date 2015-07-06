@@ -97,7 +97,7 @@ public class APIUtil {
      * @param data      data service object
      * @param version   version of the api
      */
-    public static void addApi(String serviceId, String username, Data data, String version) {
+    public static void addApi(String serviceId, String username, Data data, String version) throws DSSAPIException {
         APIProvider apiProvider;
         apiProvider = getAPIProvider(username);
         Map<String, JSONArray> resourceMap = new LinkedHashMap<String, JSONArray>();
@@ -111,7 +111,9 @@ public class APIUtil {
                 api.setStatus(APIStatus.CREATED);
                 apiProvider.changeAPIStatus(api, APIStatus.PUBLISHED, username, false);
             } catch (APIManagementException e) {
-                log.error("couldn't Create API for " + serviceId + "Service", e);
+                handleException("Couldn't create API for " + serviceId + "service", e);
+            } catch (DSSAPIException e) {
+                handleException("Error occurred while updating swagger12 definition", e);
             }
             String dssRepositoryPath;
             int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -138,12 +140,12 @@ public class APIUtil {
                     }
                 }
             } catch (FileNotFoundException e) {
-                log.error("couldn't found path :" + dssRepositoryPath + " application xml file for " + serviceId +
-                        "Service", e);
+                handleException("Couldn't find path :" + dssRepositoryPath + " application.xml file for " + serviceId +
+                        "service", e);
             } catch (XMLStreamException e) {
-                log.error("couldn't write application xml file for " + serviceId + "Service", e);
+                handleException("Couldn't write application xml file for " + serviceId + "service", e);
             } catch (Exception e) {
-                log.error("Couldn't get ServiceMetaData Object for the service " + serviceId, e);
+                handleException("Couldn't get service meta data for the service " + serviceId, e);
             }
 
 
@@ -162,8 +164,10 @@ public class APIUtil {
      * @param resourceMap map of resources in swagger12 json
      * @return API model
      */
-    private static API createAPIModel(APIProvider apiProvider, String apiContext, String apiEndpoint, String authType,
-                                      APIIdentifier identifier, Data data, Map<String, JSONArray> resourceMap) {
+    private static API createAPIModel(APIProvider apiProvider, String apiContext, String apiEndpoint,
+                                      String authType, APIIdentifier identifier, Data data, Map<String,
+            JSONArray> resourceMap) throws DSSAPIException {
+
         API api = null;
         try {
             api = new API(identifier);
@@ -185,7 +189,7 @@ public class APIUtil {
                         "API Object Created for API:" + identifier.getApiName() + "version:" + identifier.getVersion());
             }
         } catch (APIManagementException e) {
-            log.error("couldn't get tiers for provider:" + identifier.getProviderName(), e);
+            handleException("Couldn't get tiers for provider:" + identifier.getProviderName(), e);
         }
         return api;
     }
@@ -193,10 +197,10 @@ public class APIUtil {
     /**
      * To get URI templates
      *
-     * @param endpoint Endpoint URL
-     * @param authType Authentication type
-     * @param data     data service object
-     * @param tiers tiers according to publisher
+     * @param endpoint    Endpoint URL
+     * @param authType    Authentication type
+     * @param data        data service object
+     * @param tiers       tiers according to publisher
      * @param resourceMap map of resources in swagger12 json
      * @return URI templates
      */
@@ -294,7 +298,7 @@ public class APIUtil {
      * @param tenantId  tenant domain
      * @return availability of the API
      */
-    public boolean checkApiAvailability(String serviceId, int tenantId) {
+    public boolean checkApiAvailability(String serviceId, int tenantId) throws DSSAPIException {
         boolean checkApiAvailability = false;
         String DSSRepositoryPath;
         if (tenantId == MultitenantConstants.SUPER_TENANT_ID) {
@@ -312,7 +316,7 @@ public class APIUtil {
                 checkApiAvailability = application.getManagedApi();
             }
         } catch (JAXBException e) {
-            log.error("Couldn't parse xml file", e);
+            handleException("Couldn't parse xml file", e);
         }
         return checkApiAvailability;
     }
@@ -324,7 +328,7 @@ public class APIUtil {
      * @param username  username of the logged user
      * @return availability of the API
      */
-    public long getApiSubscriptions(String serviceId, String username, String version) {
+    public long getApiSubscriptions(String serviceId, String username, String version) throws DSSAPIException {
         long subscriptionCount = 0;
         APIProvider apiProvider = getAPIProvider(username);
         String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
@@ -333,7 +337,7 @@ public class APIUtil {
         try {
             subscriptionCount = apiProvider.getAPISubscriptionCountByAPI(identifier);
         } catch (APIManagementException e) {
-            log.error("error getting subscription count for API:" + serviceId + "for version:" + version, e);
+            handleException("error getting subscription count for API:" + serviceId + "for version:" + version, e);
         }
         return subscriptionCount;
     }
@@ -345,7 +349,7 @@ public class APIUtil {
      * @param username  username of the logged user
      * @param version   version of the api
      */
-    public static boolean removeApi(String serviceId, String username, String version) {
+    public static boolean removeApi(String serviceId, String username, String version) throws DSSAPIException {
         boolean status = false;
         APIProvider apiProvider = getAPIProvider(username);
         String provider = org.wso2.carbon.apimgt.impl.utils.APIUtil.replaceEmailDomain(username);
@@ -371,7 +375,7 @@ public class APIUtil {
                 }
             }
         } catch (APIManagementException e) {
-            log.error("couldn't remove API" + serviceId + "version:" + version, e);
+            handleException("couldn't remove API" + serviceId + "version:" + version, e);
         }
         return status;
     }
@@ -383,7 +387,7 @@ public class APIUtil {
      * @param username  username of the logged user
      * @return api list according to the given parameters
      */
-    public List<API> getApi(String serviceId, String username) {
+    public List<API> getApi(String serviceId, String username) throws DSSAPIException {
         String version = null;
         List<API> apiList = null;
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -408,9 +412,9 @@ public class APIUtil {
             apiList = new ArrayList<API>();
             apiList.add(apiProvider.getAPI(new APIIdentifier(provider, serviceId, version)));
         } catch (APIManagementException e) {
-            log.error("couldn't find api for Service:" + serviceId, e);
+            handleException("couldn't find api for Service:" + serviceId, e);
         } catch (JAXBException e) {
-            log.error("Couldn't parse xml file", e);
+            handleException("Couldn't parse xml file", e);
         }
         return apiList;
     }
@@ -422,7 +426,7 @@ public class APIUtil {
      * @param username  username of the logged user
      * @param version   version of the api
      */
-    public static void updateApi(String serviceId, String username, Data data, String version) {
+    public static void updateApi(String serviceId, String username, Data data, String version) throws DSSAPIException {
         APIProvider apiProvider = getAPIProvider(username);
         Map<String, JSONArray> resourceMap = new LinkedHashMap<String, JSONArray>();
         JSONObject swagger12Json = new JSONObject();
@@ -435,21 +439,20 @@ public class APIUtil {
                 updateSwagger12Definition(api, apiProvider, swagger12Json, resourceMap);
                 apiProvider.changeAPIStatus(api, APIStatus.PUBLISHED, username, false);
             } catch (APIManagementException e) {
-                log.error("error while updating api:" + serviceId + "for version:" + version, e);
-            } catch (Exception e) {
-                e.printStackTrace();
+                handleException("Error while updating api:" + serviceId + "for version:" + version, e);
             }
         }
     }
 
     /**
-     * To update an API
+     * To get life cycle event list for a particular service
      *
      * @param serviceId service name of the service
      * @param username  username of the logged user
      * @param version   version of the api
      */
-    public LifeCycleEventDao[] getLifeCycleEventList(String serviceId, String username, String version) {
+    public LifeCycleEventDao[] getLifeCycleEventList(String serviceId, String username,
+                                                     String version) throws DSSAPIException {
         APIProvider apiProvider = getAPIProvider(username);
         List<LifeCycleEvent> lifeCycleEventList;
         List<LifeCycleEventDao> lifeCycleEventDaoList = new ArrayList<LifeCycleEventDao>();
@@ -478,7 +481,7 @@ public class APIUtil {
                 }
             }
         } catch (APIManagementException e) {
-            log.error("error while getting lifecycle history api:" + serviceId + "for version:" + version, e);
+            handleException("error while getting lifecycle history api:" + serviceId + "for version:" + version, e);
         }
 
         return lifeCycleEventDaoList.toArray(new LifeCycleEventDao[lifeCycleEventDaoList.size()]);
@@ -497,7 +500,7 @@ public class APIUtil {
      */
     private static API createApiObject(String serviceId, String username, Data data, String version,
                                        APIProvider apiProvider,
-                                       Map<String, JSONArray> resourceMap) {
+                                       Map<String, JSONArray> resourceMap) throws DSSAPIException {
         String apiEndpoint;
         String apiContext;
         String tenantDomain = MultitenantUtils.getTenantDomain(username);
@@ -554,7 +557,7 @@ public class APIUtil {
     /**
      * To Create apis Json Object in swagger12 Json
      *
-     * @param api api Object
+     * @param api           api Object
      * @param swagger12Json swagger12 json object
      * @throws ParseException
      */
@@ -591,9 +594,10 @@ public class APIUtil {
 
     /**
      * To Create API Resources in swagger12 definition
-     *  @param api api Object
+     *
+     * @param api           api Object
      * @param swagger12Json swagger12 json object
-     * @param resourceMap map of resources in swagger12 json
+     * @param resourceMap   map of resources in swagger12 json
      */
     private static void createAPIResources(API api, JSONObject swagger12Json, Map<String, JSONArray> resourceMap) {
         JSONArray resourcesArray = new JSONArray();
@@ -614,8 +618,9 @@ public class APIUtil {
 
     /**
      * To Add api according to the Uri Template to Swagger12  Json
-     *  @param template   URITemplate according to path
-     * @param withParams parameters in Sql Query
+     *
+     * @param template    URITemplate according to path
+     * @param withParams  parameters in Sql Query
      * @param resourceMap map of resources in swagger12 json
      */
     private static void addApiArray(URITemplate template, List<WithParam> withParams,
@@ -730,17 +735,17 @@ public class APIUtil {
     /**
      * To Update Swagger12 definition according to api
      *
-     * @param api         api Object
-     * @param apiProvider API Provider
+     * @param api           api Object
+     * @param apiProvider   API Provider
      * @param swagger12Json swagger12 json object
-     * @param resourceMap map of resources in swagger12 json
+     * @param resourceMap   map of resources in swagger12 json
      * @throws APIManagementException
      */
     public static void updateSwagger12Definition(API api, APIProvider apiProvider, JSONObject swagger12Json,
-                                                 Map<String, JSONArray> resourceMap) throws APIManagementException {
+                                                 Map<String, JSONArray> resourceMap) throws APIManagementException, DSSAPIException {
         try {
-            createApiDocInfo(api.getId(),swagger12Json);
-            createApis(api,swagger12Json);
+            createApiDocInfo(api.getId(), swagger12Json);
+            createApis(api, swagger12Json);
             createAPIResources(api, swagger12Json, resourceMap);
             String apiJSON = ((JSONObject) swagger12Json.get("api_doc")).toJSONString();
             apiProvider.updateSwagger12Definition(api.getId(), APIConstants.API_DOC_1_2_RESOURCE_NAME, apiJSON);
@@ -751,7 +756,7 @@ public class APIUtil {
                 apiProvider.updateSwagger12Definition(api.getId(), resourcePath, tempResource.toJSONString());
             }
         } catch (ParseException e) {
-            log.error("couldn't Create Swagger12Json for Api " + api.getId().getApiName(), e);
+            handleException("couldn't Create Swagger12Json for Api " + api.getId().getApiName(), e);
         }
     }
 
@@ -769,6 +774,7 @@ public class APIUtil {
     }
 
     /**
+     * This method is used to populate data of the dss service
      *
      * @param serviceId data service Name
      * @return data object of data service
